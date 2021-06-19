@@ -1,31 +1,26 @@
-import express from 'express';
+import express, { Router } from 'express';
 import bodyParser from 'body-parser';
+import http from 'http';
 
-import routes from './routes';
+import SocketServer from './socket';
+
+import handleCORS from './middleware/handleCORS';
 
 require('dotenv').config();
 
 const app = express();
+const server = http.createServer(app);
+const socket = new SocketServer(server);
+socket.initialize();
 
-app.use(bodyParser.json({ limit: '10mb' }));
+const router = require('./router')(socket);
 
-const allowCrossDomain = (req, res, next) => {
-  res.header('Access-Control-Allow-Credentials', true);
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept,Authorization');
-
-  if (req.method === 'OPTIONS') {
-    res.sendStatus(200);
-  } else {
-    next();
-  }
-};
-
-app.use(allowCrossDomain);
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(handleCORS);
 
 app.get('/health', (req, res) => {
   res.sendStatus(200);
 });
+app.use(router);
 
-export default app;
+export default server;
