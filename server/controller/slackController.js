@@ -1,32 +1,46 @@
 import axios from 'axios';
 
 import SlackClient from '../lib/slackClient';
-import SpotifyClient from '../lib/spotifyClient';
+import {
+  help,
+  needSongName,
+  noTrack,
+  lookup,
+  trackAdded,
+  trackGonged,
+  gongCount,
+  currentTrack,
+  noCurrentTrack,
+  comingUp,
+  noComingUp,
+} from '../lib/formSlackBlock';
 
-class SlackController {
-  constructor(socket) {
-    this.slack = new SlackClient();
-    this.spotify = new SpotifyClient();
+class SlackController extends SlackClient {
+  constructor(socket, spotify, dj) {
+    super();
     this.socket = socket;
+    this.spotify = spotify;
+    this.dj = dj;
+    this.handleHelp = this.handleHelp.bind(this);
+    this.handleLookup = this.handleLookup.bind(this);
+    this.handleGong = this.handleGong.bind(this);
+    this.handleGongCount = this.handleGongCount.bind(this);
+    this.handleCurrent = this.handleCurrent.bind(this);
+    this.handleComingUp = this.handleComingUp.bind(this);
+    this.handleButton = this.handleButton.bind(this);
   }
 
-  async handleHelpCommand(req, res) {
-    try {
-      const {
-        user_id: userId,
-      } = req.body;
+  handleHelp(req, res) {
+    const {
+      user_id: userId,
+    } = req.body;
 
-      this.slack.sendHelpCommand(userId);
+    this.postEphemeral(userId, help());
 
-      res.status(200).send();
-    } catch (err) {
-      res.status(500).json({
-        err,
-      });
-    }
+    res.status(200).send();
   }
 
-  async handleLookupCommand(req, res) {
+  async handleLookup(req, res) {
     try {
       const {
         text,
@@ -34,27 +48,77 @@ class SlackController {
       } = req.body;
 
       if (text.length === 0) {
-        this.slack.sendNeedSongNameError(userId);
+        this.postEphemeral(userId, needSongName());
       } else {
-        const { body: { tracks } } = await spotify.searchSongByName(text);
-        console.log(tracks.items[0]);
+        const tracks = await this.spotify.searchSongByName(text);
         if (tracks.items.length === 0) {
-          this.slack.sendNoTrackMessage(userId, text);
+          this.postEphemeral(userId, noTrack(text));
         } else {
-          this.slack.sendAddTrackMessage(userId, tracks.items);
+          this.postEphemeral(userId, lookup(tracks.items));
         }
       }
 
       res.status(200).send();
     } catch (err) {
-      console.log(err);
       res.status(500).json({
         err,
       });
     }
   };
 
-  async handleButtonCommand(req, res) {
+  handleGong(req, res) {
+    const {
+      user_id: userId,
+    } = req.body;
+
+    const gong = this.dj.gonged();
+    this.postMessage(userId, trackGonged(userId, gong));
+    this.socket.emit('gong:track', gong);
+
+    res.status(200).send();
+  };
+
+  handleGongCount(req, res) {
+    const {
+      user_id: userId,
+    } = req.body;
+
+    this.postMessage(userId, gongCount(this.dj.gong));
+
+    res.status(200).send();
+  }
+
+  handleCurrent(req, res) {
+    const {
+      user_id: userId,
+    } = req.body;
+
+    if (this.dj.current.id) {
+      this.postMessage(userId, currentTrack(this.dj.current));
+    } else {
+      this.postMessage(userId, noCurrentTrack());
+    }
+
+    res.status(200).send();
+  }
+
+  handleComingUp(req, res) {
+    const {
+      user_id: userId,
+    } = req.body;
+
+    if (!this.dj.current.id) {
+      this.postMessage(userId, noCurrentTrack());
+    } else if (this.dj.playlist.length > 0) {
+      this.postMessage(userId, comingUp(this.dj.playlist));
+    } else {
+      this.postMessage(userId, noComingUp());
+    }
+
+    res.status(200).send();
+  }
+
+  async handleButton(req, res) {
     try {
       const {
         payload,
@@ -63,27 +127,33 @@ class SlackController {
         response_url: responseUrl,
         actions,
         user: {
-          id,
+          id: userId,
         },
       } = JSON.parse(payload);
 
-      const [action] = actions;
+      this.deleteOriginalMessage(responseUrl);
 
+      const [action] = actions;
       const {
         value,
       } = action;
 
       if (value !== 'ignore') {
-        const trackInfo = JSON.parse(value);
-        this.slack.sendTrackAddedMessage(id, trackInfo);
-        this.socket.emitToChannel('add:track', trackInfo);
+        const {
+          action,
+          ...data
+        } = JSON.parse(value);
+        if (action === 'addTrack') {
+          this.dj.addTrack(data);
+          await this.spotify.addTrackToPlaylist(this.dj.playlistId, data.id);
+          this.postMessage(userId, trackAdded(userId, data));
+          this.socket.emitAddTrack(data);
+        }
       }
 
-      this.slack.deleteOriginalMessage(responseUrl);
-
-      return res.status(200).send();
+      res.status(200).send();
     } catch (err) {
-      return res.status(500).json({
+      res.status(500).json({
         err,
       });
     }
