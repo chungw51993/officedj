@@ -2,7 +2,7 @@ import { Server } from 'socket.io';
 
 class SocketServer {
   constructor(server) {
-    this.channel = 'djdelta-smac-fest';
+    this.channel = 'keyboard-cat-1';
     this.io = new Server(server, {
       cors: {
         origin: 'http://localhost:3000',
@@ -11,38 +11,21 @@ class SocketServer {
     });
   }
 
-  initialize() {
+  init() {
     this.io.on('connection', (conn) => {
       conn.join(this.channel);
-
-      conn.on('current:track', (data) => {
-        this.io.sockets.to(this.channel).emit('catch:up', data);
-      });
-
-      conn.on('new:track', (data) => {
-        this.io.sockets.to(this.channel).emit('add:track', data);
-      });
-
-      conn.on('skip:track', (data) => {
-        this.io.sockets.to(this.channel).emit('next:track', data);
-      });
-
-      conn.on('remove:track', (data) => {
-        this.io.sockets.to(this.channel).emit('delete:track', data);
-      });
-
-      conn.on('update:progress', (data) => {
-        this.io.sockets.to(this.channel).emit('progress:track', data);
-      });
-
-      conn.on('gonged:track', (data) => {
-        this.io.sockets.to(this.channel).emit('gong:track', data);
-      });
+      if (this.addListener) {
+        this.addListener(conn);
+      }
     });
   }
 
-  emitToChannel(event, data) {
-    this.io.sockets.to(this.channel).emit('add:track', trackInfo);
+  on(conn, event, cb) {
+    conn.on(event, cb);
+  }
+
+  emit(event, data) {
+    this.io.sockets.to(this.channel).emit(event, data);
   }
 }
 
