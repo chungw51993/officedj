@@ -19,9 +19,9 @@ const App = () => {
 
   const initializeSocket = async () => {
     try {
-      await socket.init();
-      socket.on('gonged:track', handleGong);
-      socket.on('add:track', handleAdd);
+      // await socket.init();
+      // socket.on('gonged:track', handleGong);
+      // socket.on('add:track', handleAdd);
     } catch(err) {
       console.error(err);
     }

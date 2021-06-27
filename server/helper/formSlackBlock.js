@@ -91,7 +91,7 @@ export const needSongName = () => {
 };
 
 export const lookup = (tracks) => {
-  const t = tracks.slice(0, 5);
+  const t = tracks.slice(0, 3);
   const blocks = [];
 
   t.forEach((track) => {
@@ -185,6 +185,35 @@ export const trackGonged = (userId, gong) => {
   }];
 };
 
+export const alreadyGonged = (userId) => {
+  const responses = [
+    'Okay I understand that you don\'t like this song but you can only gong once a song.',
+    'I actually took away your gong stick since you can only gong once per song.',
+    'Maybe try to get other people to gong because you can only gong once per song.',
+    'Look like you\'re all out of gongs, your next gong is going to cost 99 cents. Just kidding! But seriously you can only gong once per song.',
+    'One gong per song policy. If you don\'t like it please take it up with my creator.',
+  ];
+  const randomIdx = Math.floor(Math.random() * responses.length);
+  const text = responses[randomIdx];
+  return [{
+    type: 'section',
+    text: {
+      type: 'mrkdwn',
+      text,
+    },
+  }, {
+    type: 'actions',
+    elements: [{
+      type: 'button',
+      text: {
+        type: 'plain_text',
+        text: 'Got it',
+      },
+      value: 'ignore',
+    }],
+  }];
+};
+
 export const gongCount = (gong) => {
   let count = '';
   if (gong !== 0) {
@@ -206,6 +235,8 @@ export const gongCount = (gong) => {
 
 export const currentTrack = (track) => {
   const {
+    album,
+    albumCover,
     artist,
     name,
   } = track;
@@ -213,7 +244,18 @@ export const currentTrack = (track) => {
     type: 'section',
     text: {
       type: 'mrkdwn',
-      text: `Current track playing is *${name} by ${artist}*`,
+      text: `*Current track playing*`,
+    },
+  }, {
+    type: 'section',
+    text: {
+      type: 'mrkdwn',
+      text: `*${artist}*\n${name}\n${album}`,
+    },
+    accessory: {
+      type: 'image',
+      image_url: albumCover,
+      alt_text: 'Album Cover',
     },
   }];
 };
@@ -229,7 +271,13 @@ export const noCurrentTrack = () => {
 };
 
 export const comingUp = (playlist) => {
-  const blocks = [];
+  const blocks = [{
+    type: 'section',
+    text: {
+      type: 'mrkdwn',
+      text: `*Coming up*`,
+    },
+  }];
   playlist.forEach((track) => {
     const {
       album,

@@ -1,37 +1,37 @@
-import SocketServer from '../socket';
+import socket from '../socket';
 
-class SocketController extends SocketServer {
-  constructor(server, dj) {
-    super(server);
-    this.dj = dj;
-    this.init();
+class SocketController {
+  constructor() {
     this.handleCurrent = this.handleCurrent.bind(this);
     this.handleGong = this.handleGong.bind(this);
+    this.handleConnection();
   }
 
-  addListener(conn) {
-    this.on(conn, 'info:state', this.handleCurrent);
-    this.on(conn, 'gong:track', this.handleGong);
+  handleConnection() {
+    socket.io.on('connection', (conn) => {
+      socket.join(conn);
+      socket.on(conn, 'info:state', this.handleCurrent);
+      socket.on(conn, 'gong:track', this.handleGong);
+    });
   }
 
   handleCurrent(data, cb) {
-    this.emit('current:state', data);
+    socket.emit('current:state', data);
     if (cb) {
       cb();
     }
   }
 
   handleGong(data, cb) {
-    const gong = this.dj.gonged();
-    this.emit('gonged:track', gong);
+    socket.emit('gonged:track', data);
     if (cb) {
       cb;
     }
   }
 
   emitAddTrack(track) {
-    this.emit('add:track', track);
+    socket.emit('add:track', track);
   }
 }
 
-export default SocketController;
+export default new SocketController();

@@ -1,8 +1,10 @@
 import { Server } from 'socket.io';
 
-class SocketServer {
-  constructor(server) {
-    this.channel = 'keyboard-cat-1';
+import server from './app';
+
+class Socket {
+  constructor() {
+    this.channel = 'keyboard-cat';
     this.io = new Server(server, {
       cors: {
         origin: 'http://localhost:3000',
@@ -11,12 +13,11 @@ class SocketServer {
     });
   }
 
-  init() {
+  handleConnection() {
     this.io.on('connection', (conn) => {
       conn.join(this.channel);
-      if (this.addListener) {
-        this.addListener(conn);
-      }
+      conn.on('info:state', this.handleCurrent);
+      conn.on('gong:track', this.handleGong);
     });
   }
 
@@ -29,4 +30,4 @@ class SocketServer {
   }
 }
 
-export default SocketServer;
+export default new Socket();

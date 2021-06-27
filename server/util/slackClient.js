@@ -37,4 +37,4 @@ class SlackClient {
   }
 }
 
-export default SlackClient;
+export default new SlackClient();

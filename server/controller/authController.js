@@ -1,13 +1,19 @@
+import spotify from '../util/spotifyClient';
+import spotifyController from './spotifyController';
+
+import djDelta from '../state/djDelta';
+
+import Logger from '../util/logger';
+
 const {
   SPOTIFY_CLIENT_ID,
   SPOTIFY_REDIRECT_URL,
 } = process.env;
 
 class AuthController {
-  constructor(spotify, dj) {
-    this.spotify = spotify;
-    this.dj = dj;
-    this.handleSpotifyCallback = this.handleSpotifyCallback.bind(this);spotify
+  constructor() {
+    this.logger = Logger.getLogger('AuthController');
+    this.handleSpotifyCallback = this.handleSpotifyCallback.bind(this);
   }
 
   handleSpotifyAuth(req, res) {
@@ -19,23 +25,28 @@ class AuthController {
     const {
       query,
     } = req;
-    if (query.error) {
-      this.dj.set('error', query.error);
-    } else if (query.code) {
-      const currentUser = await this.spotify.setUserClient(query.code);
-      let playlistId = await this.spotify.getPlaylist();
-      let playlist = [];
-      if (!playlistId) {
-        playlistId = await this.spotify.createPlaylist();
-      } else {
-        playlist = await this.spotify.getPlaylistTracks(playlistId);
+    try {
+      if (query.error) {
+        djDelta.set('error', query.error);
+      } else if (query.code) {
+        const currentUser = await spotify.setUserClient(query.code);
+        let playlistId = await spotifyController.getPlaylist();
+        let playlist = [];
+        if (!playlistId) {
+          playlistId = await spotifyController.createPlaylist();
+        } else {
+          playlist = await spotifyController.getPlaylistTracks(playlistId);
+        }
+        await djDelta.set('user', currentUser);
+        await djDelta.set('playlistId', playlistId);
+        await djDelta.set('playlist', playlist);
       }
-      this.dj.set('user', currentUser);
-      this.dj.set('playlistId', playlistId);
-      this.dj.set('playlist', playlist);
+      res.redirect('http://localhost:3000');
+    } catch (err) {
+      this.logger.error(err);
+      res.redirect('http://localhost:3000');
     }
-    res.redirect('http://localhost:3000');
   }
 }
 
-export default AuthController;
+export default new AuthController();
