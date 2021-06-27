@@ -9,10 +9,12 @@ import {
   trackGonged,
   alreadyGonged,
   gongCount,
+  noTrackToGong,
   currentTrack,
   noCurrentTrack,
   comingUp,
   noComingUp,
+  noUser,
 } from '../helper/formSlackBlock';
 
 import spotifyController from './spotifyController';
@@ -26,6 +28,19 @@ class SlackController {
     this.handleLookup = this.handleLookup.bind(this);
     this.handleGong = this.handleGong.bind(this);
     this.handleButton = this.handleButton.bind(this);
+  }
+
+  checkForUser(req, res, next) {
+    const {
+      user_id: userId,
+    } = req.body;
+    const currentUser = djDelta.get('user');
+    if (currentUser.id) {
+      next();
+    } else {
+      slack.postMessage(userId, noUser());
+      res.status(200).send();
+    }
   }
 
   handleHelp(req, res) {
@@ -59,19 +74,28 @@ class SlackController {
         err,
       });
     }
-  };
+  }
 
   async handleGong(req, res) {
     const {
       user_id: userId,
     } = req.body;
     try {
-      const gong = await djDelta.gonged(userId);
-      if (gong !== false) {
-        slack.postMessage(userId, trackGonged(userId, gong));
-        socketController.handleGong(gong);
+      const current = await spotifyController.getCurrentTrack();
+      if (current) {
+        const gong = await djDelta.gonged(userId, current);
+        if (gong !== false) {
+          slack.postMessage(userId, trackGonged(userId, gong));
+          socketController.handleGong(gong);
+          if (gong === 0) {
+            await spotifyController.skipToNextTrack();
+            slack.postMessage(userId, currentTrack(current));
+          }
+        } else {
+          slack.postEphemeral(userId, alreadyGonged(userId));
+        }
       } else {
-        slack.postEphemeral(userId, alreadyGonged(userId));
+        slack.postEphemeral(userId, noTrackToGong());
       }
       res.status(200).send();
     } catch (err) {
@@ -80,7 +104,7 @@ class SlackController {
         err,
       });
     }
-  };
+  }
 
   handleGongCount(req, res) {
     const {
@@ -91,31 +115,29 @@ class SlackController {
     res.status(200).send();
   }
 
-  handleCurrent(req, res) {
+  async handleCurrent(req, res) {
     const {
       user_id: userId,
     } = req.body;
-    const current = djDelta.currentTrack();
+    const current = await spotifyController.getCurrentTrack();
     if (current) {
       slack.postMessage(userId, currentTrack(current));
     } else {
-      slack.postMessage(userId, noCurrentTrack());
+      slack.postEphemeral(userId, noCurrentTrack());
     }
     res.status(200).send();
   }
 
-  handleComingUp(req, res) {
+  async handleComingUp(req, res) {
     const {
       user_id: userId,
     } = req.body;
-    const current = djDelta.currentTrack();
-    const queue = djDelta.playlistQueue();
-    if (!current) {
-      slack.postMessage(userId, noCurrentTrack());
-    } else if (next.length > 0) {
+    const current = await spotifyController.getCurrentTrack();
+    const queue = djDelta.comingUpOnQueue(current);
+    if (queue.length > 0) {
       slack.postMessage(userId, comingUp(queue));
     } else {
-      slack.postMessage(userId, noComingUp());
+      slack.postEphemeral(userId, noComingUp());
     }
     res.status(200).send();
   }
@@ -145,8 +167,8 @@ class SlackController {
           ...data
         } = JSON.parse(value);
         if (action === 'addTrack') {
-          djDelta.addTrack(data);
-          await spotifyController.addTrackToPlaylist(djDelta.get('playlistId'), data.id);
+          djDelta.addTrackToQueue(data);
+          await spotifyController.addTrackToQueue(data.id);
           slack.postMessage(userId, trackAdded(userId, data));
           socketController.emitAddTrack(data);
         }
@@ -159,7 +181,7 @@ class SlackController {
         err,
       });
     }
-  };
+  }
 }
 
 export default new SlackController();

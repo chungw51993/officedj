@@ -1,3 +1,7 @@
+const {
+  CLIENT_URL,
+} = process.env;
+
 export const help = () => {
   return [{
     type: 'section',
@@ -75,7 +79,7 @@ export const needSongName = () => {
     type: 'section',
     text: {
       type: 'mrkdwn',
-      text: '*Unfortunately I\'m not a mind reader I only spin the tunes*\nPlease specify what song you want me to play',
+      text: '*Unfortunately I\'m not a mind reader I only play the tunes*\nPlease specify what song you want me to play',
     },
   }, {
     type: 'actions',
@@ -96,6 +100,7 @@ export const lookup = (tracks) => {
 
   t.forEach((track) => {
     const {
+      id,
       album,
       artists,
       href,
@@ -118,15 +123,13 @@ export const lookup = (tracks) => {
       },
     });
 
-    const hrefId = href.split('/');
-
     const value = {
       action: 'addTrack',
       album: album.name,
       albumCover: albumCover.url,
       artist: artist.name,
       name,
-      id: hrefId[hrefId.length - 1],
+      id,
     };
 
     blocks.push({
@@ -135,7 +138,7 @@ export const lookup = (tracks) => {
         type: 'button',
         text: {
           type: 'plain_text',
-          text: 'Add it to the playlist',
+          text: 'Add it to the queue',
         },
         value: JSON.stringify(value),
       }],
@@ -166,15 +169,15 @@ export const trackAdded = (userId, track) => {
     type: 'section',
     text: {
       type: 'mrkdwn',
-      text: `<@${userId}> just added *${name} by ${artist}* to the playlist!`,
+      text: `<@${userId}> just added *${name} by ${artist}* to the queue!`,
     },
   }];
 };
 
 export const trackGonged = (userId, gong) => {
-  let text = `<@${userId}> just rang the gong! Need ${3 - gong} to skip the current track`;
+  let text = `<@${userId}> just rang the gong! Need ${3 - gong} more to skip the current song`;
   if (gong === 0) {
-    text = 'GONG!!!!';
+    text = ':bell: GONG!!!';
   }
   return [{
     type: 'section',
@@ -191,7 +194,7 @@ export const alreadyGonged = (userId) => {
     'I actually took away your gong stick since you can only gong once per song.',
     'Maybe try to get other people to gong because you can only gong once per song.',
     'Look like you\'re all out of gongs, your next gong is going to cost 99 cents. Just kidding! But seriously you can only gong once per song.',
-    'One gong per song policy. If you don\'t like it please take it up with my creator.',
+    'Unfortunately there is a one gong per song policy. To change the policy please start a petition and submit it to my creator.',
   ];
   const randomIdx = Math.floor(Math.random() * responses.length);
   const text = responses[randomIdx];
@@ -236,29 +239,51 @@ export const gongCount = (gong) => {
 export const currentTrack = (track) => {
   const {
     album,
-    albumCover,
-    artist,
+    artists,
+    href,
     name,
   } = track;
+  const [artist] = artists;
+  const albumCover = album.images[2];
   return [{
     type: 'section',
     text: {
       type: 'mrkdwn',
-      text: `*Current track playing*`,
+      text: `*Current song playing*`,
     },
   }, {
     type: 'section',
     text: {
       type: 'mrkdwn',
-      text: `*${artist}*\n${name}\n${album}`,
+      text: `*${artist.name}*\n${name}\n${album.name}`,
     },
     accessory: {
       type: 'image',
-      image_url: albumCover,
+      image_url: albumCover.url,
       alt_text: 'Album Cover',
     },
   }];
 };
+
+export const noTrackToGong = () => {
+  return [{
+    type: 'section',
+    text: {
+      type: 'mrkdwn',
+      text: 'I get that you want to ring the gong badly but currently there is no song playing!',
+    },
+  }, {
+    type: 'actions',
+    elements: [{
+      type: 'button',
+      text: {
+        type: 'plain_text',
+        text: 'Got it',
+      },
+      value: 'ignore',
+    }],
+  }];
+}
 
 export const noCurrentTrack = () => {
   return [{
@@ -267,10 +292,20 @@ export const noCurrentTrack = () => {
       type: 'mrkdwn',
       text: 'Looks like my iPod ran out of tracks. Please use lookup to add more songs!',
     },
+  }, {
+    type: 'actions',
+    elements: [{
+      type: 'button',
+      text: {
+        type: 'plain_text',
+        text: 'Got it',
+      },
+      value: 'ignore',
+    }],
   }];
 };
 
-export const comingUp = (playlist) => {
+export const comingUp = (queue) => {
   const blocks = [{
     type: 'section',
     text: {
@@ -278,7 +313,7 @@ export const comingUp = (playlist) => {
       text: `*Coming up*`,
     },
   }];
-  playlist.forEach((track) => {
+  queue.slice(0, 3).forEach((track) => {
     const {
       album,
       albumCover,
@@ -306,7 +341,37 @@ export const noComingUp = () => {
     type: 'section',
     text: {
       type: 'mrkdwn',
-      text: 'Looks like current song playing is the last song on the playlist. Please add tracks if you want to keep the party going!',
+      text: 'Uh oh looks like there isn\'t any more songs in the queue. Please add more songs to keep this going!',
     },
+  }, {
+    type: 'actions',
+    elements: [{
+      type: 'button',
+      text: {
+        type: 'plain_text',
+        text: 'Got it',
+      },
+      value: 'ignore',
+    }],
+  }];
+};
+
+export const noUser = () => {
+  return [{
+    type: 'section',
+    text: {
+      type: 'mrkdwn',
+      text: `Unfortunately I need a host to function. Please go to ${CLIENT_URL} to become a host.`,
+    },
+  }, {
+    type: 'actions',
+    elements: [{
+      type: 'button',
+      text: {
+        type: 'plain_text',
+        text: 'Got it',
+      },
+      value: 'ignore',
+    }],
   }];
 };

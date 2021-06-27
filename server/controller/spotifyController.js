@@ -10,66 +10,28 @@ class SpotifyController {
     return tracks;
   }
 
-  async getPlaylist() {
+  async getCurrentTrack() {
     await spotify.checkUserToken();
-    const { body: { items } } = await spotify.userClient.getUserPlaylists();
-    let playlistId = null;
-    items.forEach((playlist) => {
-      const {
-        id,
-        name,
-      } = playlist;
-      if (name === 'DJDelta\'s iPod') {
-        playlistId = id;
-      }
-    });
-    return playlistId;
-  }
-
-  async getPlaylistTracks(playlistId) {
-    await spotify.checkUserToken();
-    const { body: { items } } = await spotify.userClient.getPlaylistTracks(playlistId);
-    let playlist = [];
-    if (items.length > 0) {
-      playlist = items.map((item) => {
-        const {
-          track: {
-            album,
-            artists,
-            href,
-            name,
-          },
-        } = item;
-        const [artist] = artists;
-        const albumCover = album.images[2];
-        const hrefId = href.split('/');
-        return {
-          album: album.name,
-          albumCover: albumCover.url,
-          artist: artist.name,
-          name,
-          id: hrefId[hrefId.length - 1],
-        }
-      });
+    const { body } = await spotify.userClient.getMyCurrentPlayingTrack();
+    const {
+      is_playing: isPlaying,
+      item,
+    } = body;
+    if (isPlaying) {
+      return item;
     }
-    return playlist;
+    return false;
   }
 
-  async createPlaylist() {
+  async addTrackToQueue(trackId) {
     await spotify.checkUserToken();
-    const { body: { id: playlistId } } = await spotify.userClient.createPlaylist('DJDelta\'s iPod', {
-      description: 'DJDelta\'s iPod under the DJ booth',
-      public: false,
-    });
-    const playlistImg = base64Encode(path.join(__dirname, '../asset/djdelta.png'));
-    await spotify.userClient.uploadCustomPlaylistCoverImage(playlistId, playlistImg);
-    return playlistId;
+    const track = `spotify:track:${trackId}`;
+    await spotify.userClient.addToQueue(track);
   }
 
-  async addTrackToPlaylist(playlistId, trackId) {
+  async skipToNextTrack() {
     await spotify.checkUserToken();
-    const tracks = [`spotify:track:${trackId}`];
-    await spotify.userClient.addTracksToPlaylist(playlistId, tracks);
+    await spotify.userClient.skipToNext();
   }
 }
 
