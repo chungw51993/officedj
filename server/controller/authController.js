@@ -8,6 +8,7 @@ import Logger from '../util/logger';
 const {
   SPOTIFY_CLIENT_ID,
   SPOTIFY_REDIRECT_URL,
+  CLIENT_URL,
 } = process.env;
 
 class AuthController {
@@ -30,21 +31,12 @@ class AuthController {
         djDelta.set('error', query.error);
       } else if (query.code) {
         const currentUser = await spotify.setUserClient(query.code);
-        let playlistId = await spotifyController.getPlaylist();
-        let playlist = [];
-        if (!playlistId) {
-          playlistId = await spotifyController.createPlaylist();
-        } else {
-          playlist = await spotifyController.getPlaylistTracks(playlistId);
-        }
         await djDelta.set('user', currentUser);
-        await djDelta.set('playlistId', playlistId);
-        await djDelta.set('playlist', playlist);
       }
-      res.redirect('http://localhost:3000');
+      res.redirect(CLIENT_URL);
     } catch (err) {
       this.logger.error(err);
-      res.redirect('http://localhost:3000');
+      res.redirect(CLIENT_URL);
     }
   }
 }

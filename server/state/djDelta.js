@@ -4,9 +4,8 @@ class DJDelta {
   constructor() {
     this.state = {
       user: {},
-      playlistId: null,
-      playlist: [],
-      currentIdx: 0,
+      current: {},
+      queue: [],
       gong: 0,
       gongList: [],
       error: false,
@@ -39,11 +38,18 @@ class DJDelta {
     return false;
   }
 
-  async gonged(userId) {
+  async gonged(userId, track) {
     let {
+      current,
       gong,
       gongList,
+      queue,
     } = this.state;
+    if (current.id !== track.id) {
+      await this.set('current', track);
+      gong = 0;
+      gongList = [];
+    }
     if (!gongList.includes(userId)) {
       if (gong >= 2) {
         gong = 0;
@@ -54,48 +60,41 @@ class DJDelta {
       }
       await this.set('gong', gong);
       await this.set('gongList', gongList);
+      await this.set('queue', queue);
       return gong;
     }
     return false;
   }
 
-
-  async addTrack(track) {
+  async addTrackToQueue(track) {
     const {
-      playlist,
+      current,
+      queue,
     } = this.state;
-    playlist.push(track);
-    await this.set('playlist', playlist);
-  }
-
-  currentTrack() {
-    const {
-      playlist,
-      currentIdx,
-    } = this.state;
-    if (playlist[currentIdx]) {
-      return playlist[currentIdx];
+    if (!current.id) {
+      await this.set('current', track);
     }
-    return null;
+    queue.push(track);
+    await this.set('queue', queue);
   }
 
-  playlistQueue() {
+  comingUpOnQueue(current) {
     const {
-      playlist,
-      currentIdx,
+      queue,
     } = this.state;
-    return playlist.slice(currentIdx + 1);
-  }
-
-  nextTrack() {
-    const currentIdx = this.get('currentIdx');
-    const playlist = this.get('playlist');
-    if (playlist.length > 0) {
-      const nextTrack = playlist.shift();
-      current = nextTrack;
-    } else {
-      current = {};
+    const {
+      id,
+    } = current;
+    let currentIdx = -1;
+    queue.forEach((track, idx) => {
+      if (id === track.id) {
+        currentIdx = idx;
+      }
+    });
+    if (currentIdx !== -1) {
+      return queue.slice(currentIdx + 1);
     }
+    return queue;
   }
 }
 

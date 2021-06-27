@@ -11,16 +11,16 @@ router.get('/auth/spotify/callback', authController.handleSpotifyCallback);
 
 router.post('/slack/help', slackController.handleHelp);
 
-router.post('/slack/lookup', slackController.handleLookup);
+router.post('/slack/lookup', slackController.checkForUser, slackController.handleLookup);
 
-router.post('/slack/gong', slackController.handleGong);
+router.post('/slack/gong', slackController.checkForUser,slackController.handleGong);
 
-router.post('/slack/gong-count', slackController.handleGongCount);
+router.post('/slack/gong-count', slackController.checkForUser,slackController.handleGongCount);
 
-router.post('/slack/current', slackController.handleCurrent);
+router.post('/slack/current', slackController.checkForUser,slackController.handleCurrent);
 
-router.post('/slack/coming-up', slackController.handleComingUp);
+router.post('/slack/coming-up', slackController.checkForUser,slackController.handleComingUp);
 
-router.post('/slack/button', slackController.handleButton);
+router.post('/slack/button', slackController.checkForUser,slackController.handleButton);
 
 export default router;
