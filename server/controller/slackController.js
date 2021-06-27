@@ -73,10 +73,13 @@ class SlackController {
       } else {
         slack.postEphemeral(userId, alreadyGonged(userId));
       }
+      res.status(200).send();
     } catch (err) {
       this.logger.error(err);
+      res.status(500).json({
+        err,
+      });
     }
-    res.status(200).send();
   };
 
   handleGongCount(req, res) {
