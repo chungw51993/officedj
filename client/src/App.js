@@ -1,9 +1,14 @@
 import { useEffect, useState, useRef } from 'react';
+import Lottie from 'react-lottie';
 
 import initialState from './lib/initialState';
 import SocketClient from './lib/socket';
 
 import './asset/style/App.scss';
+
+import deltaThinkingAnim from './asset/animation/delta-thinking.json';
+
+import spotifyImg from './asset/img/spotify.png';
 
 const {
   API_URL,
@@ -49,23 +54,35 @@ const App = () => {
     socket.emit('gong:track');
   }
 
+  const defaultOptions = {
+    loop: true,
+    autoplay: true,
+    animationData: deltaThinkingAnim,
+    rendererSettings: {
+      preserveAspectRatio: 'xMidYMid slice'
+    }
+  };
+
   return (
     <div className="App">
-      <header className="App-header">
+      <div className="image-container">
+        <Lottie
+          options={defaultOptions}
+          style={{ height: '200px', width: '200px' }}
+        />
+      </div>
+      <div className="button-container">
         <a
           href={`${API_URL}/auth/spotify`}
+          className="login-button"
         >
-          Spotify
+          <img
+            className="spotify"
+            src={spotifyImg}
+            alt="Spotify"
+          />
+          <span className="btn-text">Host DJ Delta</span>
         </a>
-        <button
-          className="header"
-          onClick={gongTrack}
-        >
-          what is going on
-        </button>
-      </header>
-      <div>
-        {state.gong}
       </div>
     </div>
   );
