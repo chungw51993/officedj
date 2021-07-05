@@ -31,13 +31,19 @@ export const help = () => {
     type: 'section',
     text: {
       type: 'mrkdwn',
-      text: '*/next*\nShow the next track to play',
+      text: '*/coming-up*\nShow tracks coming up',
     },
   }, {
     type: 'section',
     text: {
       type: 'mrkdwn',
-      text: '*/coming-up*\nShow tracks coming up',
+      text: '*/host*\nShow current host',
+    },
+  }, {
+    type: 'section',
+    text: {
+      type: 'mrkdwn',
+      text: '*/reset*\nReset DJ Delta to factory setting',
     },
   }, {
     type: 'actions',
@@ -363,15 +369,64 @@ export const noUser = () => {
       type: 'mrkdwn',
       text: `Unfortunately I need a host to function. Please go to ${CLIENT_URL} to become a host.`,
     },
+  }];
+};
+
+export const noDevice = (user) => {
+  return [{
+    type: 'section',
+    text: {
+      type: 'mrkdwn',
+      text: `I still need a device to play the songs so ${user.email} needs to turn on Spotify on the computer, phone, fridge, or etc...`,
+    },
+  }];
+};
+
+export const currentHost = (user) => {
+  return [{
+    type: 'section',
+    text: {
+      type: 'mrkdwn',
+      text: `Currently my iPod is under ${user.email}'s desk`,
+    },
+  }];
+};
+
+export const confirmReset = () => {
+  return [{
+    type: 'section',
+    text: {
+      type: 'mrkdwn',
+      text: 'Are you sure you want to reset DJ Delta? The current queue will be lost and we\'ll have to start all over.',
+    },
   }, {
     type: 'actions',
     elements: [{
       type: 'button',
       text: {
         type: 'plain_text',
-        text: 'Got it',
+        text: 'Nope',
       },
       value: 'ignore',
+    }, {
+      type: 'button',
+      text: {
+        type: 'plain_text',
+        text: 'RESET',
+      },
+      value: JSON.stringify({
+        action: 'resetState',
+      }),
     }],
   }];
 };
+
+export const deltaReset = (userId) => {
+  return [{
+    type: 'section',
+    text: {
+      type: 'mrkdwn',
+      text: `:cd:*Record Scratch*:cd: <@${userId}> just pressed the RESET button!\nResetting to factory setting...\nPlease visit ${CLIENT_URL} to become a host.`,
+    },
+  }];
+}

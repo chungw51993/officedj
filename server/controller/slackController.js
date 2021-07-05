@@ -15,6 +15,10 @@ import {
   comingUp,
   noComingUp,
   noUser,
+  noDevice,
+  currentHost,
+  confirmReset,
+  deltaReset,
 } from '../helper/formSlackBlock';
 
 import spotifyController from './spotifyController';
@@ -35,11 +39,24 @@ class SlackController {
       user_id: userId,
     } = req.body;
     const currentUser = djDelta.get('user');
-    if (currentUser.id) {
-      next();
-    } else {
+    if (!currentUser || !currentUser.id) {
       slack.postMessage(userId, noUser());
       res.status(200).send();
+    } else {
+      next();
+    }
+  }
+
+  async checkForDevices(req, res, next) {
+    const {
+      user_id: userId,
+    } = req.body;
+    const currentUser = djDelta.get('user');
+    const devices = await spotifyController.getDevices();
+    if (devices.length === 0) {
+      slack.postMessage(userId, noDevice(currentUser));
+    } else {
+      next();
     }
   }
 
@@ -89,7 +106,10 @@ class SlackController {
           socketController.handleGong(gong);
           if (gong === 0) {
             await spotifyController.skipToNextTrack();
-            slack.postMessage(userId, currentTrack(current));
+            const newCurrent = await spotifyController.getCurrentTrack();
+            if (newCurrent) {
+              slack.postMessage(userId, currentTrack(newCurrent));
+            }
           }
         } else {
           slack.postEphemeral(userId, alreadyGonged(userId));
@@ -142,6 +162,23 @@ class SlackController {
     res.status(200).send();
   }
 
+  handleHost(req, res) {
+    const {
+      user_id: userId,
+    } = req.body;
+    const current = djDelta.get('user');
+    slack.postMessage(userId, currentHost(current));
+    res.status(200).send();
+  }
+
+  handleReset(req, res) {
+    const {
+      user_id: userId,
+    } = req.body;
+    slack.postEphemeral(userId, confirmReset());
+    res.status(200).send();
+  }
+
   async handleButton(req, res) {
     try {
       const {
@@ -167,10 +204,9 @@ class SlackController {
           ...data
         } = JSON.parse(value);
         if (action === 'addTrack') {
-          djDelta.addTrackToQueue(data);
-          await spotifyController.addTrackToQueue(data.id);
-          slack.postMessage(userId, trackAdded(userId, data));
-          socketController.emitAddTrack(data);
+          this.handleAddTrack(userId, data);
+        } else if (action === 'resetState') {
+          this.handleResetState(userId);
         }
       }
 
@@ -182,6 +218,21 @@ class SlackController {
       });
     }
   }
+
+  async handleAddTrack(userId, data) {
+    await spotifyController.addTrackToQueue(data.id);
+    djDelta.addTrackToQueue(data);
+    slack.postMessage(userId, trackAdded(userId, data));
+    socketController.emitAddTrack(data);
+  }
+
+  async handleResetState(userId) {
+    djDelta.resetToInitialState();
+    await spotifyController.resetUser();
+    slack.postMessage(userId, deltaReset(userId));
+    socketController.emitResetState();
+  }
 }
+
 
 export default new SlackController();

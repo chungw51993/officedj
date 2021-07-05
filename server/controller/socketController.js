@@ -32,6 +32,10 @@ class SocketController {
   emitAddTrack(track) {
     socket.emit('add:track', track);
   }
+
+  emitResetState() {
+    socket.emit('reset:state', { reset: true });
+  }
 }
 
 export default new SocketController();
