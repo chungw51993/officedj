@@ -2,7 +2,12 @@ import redis from '../util/redisClient';
 
 class DJDelta {
   constructor() {
-    this.state = {
+    this.state = this.getInitialState();
+    this.initialize();
+  }
+
+  getInitialState() {
+    return {
       user: {},
       current: {},
       queue: [],
@@ -10,7 +15,6 @@ class DJDelta {
       gongList: [],
       error: false,
     };
-    this.initialize();
   }
 
   async initialize() {
@@ -38,6 +42,16 @@ class DJDelta {
     return false;
   }
 
+  async setState(state) {
+    Object.keys(state).forEach((key) => {
+      if (this.state[key] !== undefined) {
+        this.state[key] = state[key];
+      }
+    });
+    await redis.setObject('djDeltaState', this.state);
+    return true;
+  }
+
   async gonged(userId, track) {
     let {
       current,
@@ -58,9 +72,11 @@ class DJDelta {
         gong += 1;
         gongList.push(userId);
       }
-      await this.set('gong', gong);
-      await this.set('gongList', gongList);
-      await this.set('queue', queue);
+      await this.setState({
+        gong,
+        gongList,
+        queue,
+      });
       return gong;
     }
     return false;
@@ -73,9 +89,10 @@ class DJDelta {
     } = this.state;
     if (!current.id) {
       await this.set('current', track);
+    } else {
+      queue.push(track);
+      await this.set('queue', queue);
     }
-    queue.push(track);
-    await this.set('queue', queue);
   }
 
   comingUpOnQueue(current) {
@@ -94,7 +111,12 @@ class DJDelta {
     if (currentIdx !== -1) {
       return queue.slice(currentIdx + 1);
     }
-    return queue;
+    return [];
+  }
+
+  resetToInitialState() {
+    this.state = this.getInitialState();
+    redis.setObject('djDeltaState', this.state);
   }
 }
 

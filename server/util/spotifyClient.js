@@ -136,6 +136,14 @@ class SpotifyClient {
       this.updateSpotifySession();
     }
   }
+
+  resetUserClient() {
+    this.userClient = null;
+    this.userAccessToken = null;
+    this.userRefreshToken = null;
+    this.userTokenExpires = moment();
+    this.updateSpotifySession();
+  }
 }
 
 export default new SpotifyClient();

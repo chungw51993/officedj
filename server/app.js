@@ -1,6 +1,7 @@
 import express, { Router } from 'express';
 import bodyParser from 'body-parser';
 import http from 'http';
+import path from 'path';
 
 import handleCORS from './middleware/handleCORS';
 import logRequest from './middleware/logRequest';
@@ -19,5 +20,7 @@ app.get('/health', (req, res) => {
 });
 
 app.use(router);
+
+app.use(express.static(path.join(__dirname, '..', 'client', 'build')));
 
 export default server;
