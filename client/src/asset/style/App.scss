@@ -13,6 +13,11 @@
   }
   .button-container {
     margin-top: 25px;
+    .loading-container {
+      color: $WHITE;
+      font-size: 1.125rem;
+      font-weight: 500;
+    }
     .login-button {
       display: flex;
       align-items: center;
@@ -25,7 +30,7 @@
       }
       .btn-text {
         color: $WHITE;
-        font-family: sans-serif;
+
         font-weight: 500;
         font-size: 24px;
       }

@@ -1,24 +1,37 @@
-import { Server } from 'socket.io';
+import app from './app';
 
-import server from './app';
+import djDelta from './state/djDelta';
 
 class Socket {
   constructor() {
     this.channel = 'keyboard-cat';
-    this.io = new Server(server, {
-      cors: {
-        origin: 'http://localhost:3000',
-        methods: ['GET', 'POST'],
-      },
-    });
+    this.handleConnection = this.handleConnection.bind(this);
+    this.io = app.io;
+    app.io.on('connection', this.handleConnection);
   }
 
-  handleConnection() {
-    this.io.on('connection', (conn) => {
-      conn.join(this.channel);
-      conn.on('info:state', this.handleCurrent);
-      conn.on('gong:track', this.handleGong);
-    });
+  handleConnection(conn) {
+    conn.join(this.channel);
+
+    const state = djDelta.get('state');
+    const user = djDelta.get('user');
+    let current = {
+      state,
+    };
+    if (user.email) {
+      current.user = user;
+    }
+    this.emit('current:state', current);
+
+    conn.on('change:state', this.handleStateChange);
+  }
+
+  async handleStateChange(data) {
+    const {
+      state,
+    } = data;
+    await djDelta.set('state', state);
+    this.emit('current:state', { state });
   }
 
   on(conn, event, cb) {

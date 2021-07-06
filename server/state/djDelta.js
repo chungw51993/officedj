@@ -14,6 +14,7 @@ class DJDelta {
       gong: 0,
       gongList: [],
       error: false,
+      state: 'waitingForHost',
     };
   }
 

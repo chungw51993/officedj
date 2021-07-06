@@ -6,6 +6,7 @@
   "scripts": {
     "start": "concurrently \"npm run server\" \"npm run client\"",
     "client": "npm start --prefix client",
+    "build:prod": "npm run build --prefix client",
     "server": "nodemon bin/www",
     "lint": "eslint ."
   },

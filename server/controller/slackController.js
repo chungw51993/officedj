@@ -22,7 +22,6 @@ import {
 } from '../helper/formSlackBlock';
 
 import spotifyController from './spotifyController';
-import socketController from './socketController';
 
 import Logger from '../util/logger';
 
@@ -103,7 +102,6 @@ class SlackController {
         const gong = await djDelta.gonged(userId, current);
         if (gong !== false) {
           slack.postMessage(userId, trackGonged(userId, gong));
-          socketController.handleGong(gong);
           if (gong === 0) {
             await spotifyController.skipToNextTrack();
             const newCurrent = await spotifyController.getCurrentTrack();
@@ -223,14 +221,12 @@ class SlackController {
     await spotifyController.addTrackToQueue(data.id);
     djDelta.addTrackToQueue(data);
     slack.postMessage(userId, trackAdded(userId, data));
-    socketController.emitAddTrack(data);
   }
 
   async handleResetState(userId) {
     djDelta.resetToInitialState();
     await spotifyController.resetUser();
     slack.postMessage(userId, deltaReset(userId));
-    socketController.emitResetState();
   }
 }
 
