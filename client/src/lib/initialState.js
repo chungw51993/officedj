@@ -1,4 +1,5 @@
 const initialState = () => ({
+  state: 'loading',
   playlist: [],
   current: [],
   gong: 0,

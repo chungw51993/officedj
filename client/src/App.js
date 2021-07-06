@@ -7,6 +7,7 @@ import SocketClient from './lib/socket';
 import './asset/style/App.scss';
 
 import deltaThinkingAnim from './asset/animation/delta-thinking.json';
+import deltaGoodBadAnim from './asset/animation/delta-good-bad.json';
 
 import spotifyImg from './asset/img/spotify.png';
 
@@ -24,34 +25,61 @@ const App = () => {
 
   const initializeSocket = async () => {
     try {
-      // await socket.init();
-      // socket.on('gonged:track', handleGong);
-      // socket.on('add:track', handleAdd);
+      await socket.init();
+      socket.on('current:state', handleCurrentState);
     } catch(err) {
       console.error(err);
     }
   }
 
-  const handleGong = (data) => {
+  const handleCurrentState = (data) => {
+    const {
+      state: s,
+      user,
+    } = data;
     const newState = {
       ...state,
-      gong: data,
+      state: s,
+      user,
     };
     setState(newState);
   }
 
-  const handleAdd = (data) => {
-    const newPlaylist = [...state.playlist];
-    newPlaylist.push(data);
-    const newState = {
-      ...state,
-      playlist: newPlaylist,
-    };
-    setState(newState);
+  const loggingIn = () => {
+    socket.emit('change:state', { state: 'loggingIn' });
+    window.location.href = `${API_URL}/auth/spotify`;
   }
 
-  const gongTrack = () => {
-    socket.emit('gong:track');
+  const renderButton = () => {
+    if (state.state === 'loggingIn') {
+      return (
+        <div className="loading-container">
+          Someone is volunteering to be a host...
+        </div>
+      );
+    }
+
+    if (state.state === 'hostFound') {
+      return (
+        <div className="loading-container">
+          {state.user.email} is currently hosting DJ Delta
+        </div>
+      );
+    }
+
+    return (
+      <button
+        className="login-button"
+        onClick={loggingIn}
+      >
+        <img
+          className="spotify"
+          src={spotifyImg}
+          alt="Spotify"
+        />
+        <span className="btn-text">Host DJ Delta</span>
+      </button>
+    );
   }
 
   const defaultOptions = {
@@ -72,17 +100,7 @@ const App = () => {
         />
       </div>
       <div className="button-container">
-        <a
-          href={`${API_URL}/auth/spotify`}
-          className="login-button"
-        >
-          <img
-            className="spotify"
-            src={spotifyImg}
-            alt="Spotify"
-          />
-          <span className="btn-text">Host DJ Delta</span>
-        </a>
+        { renderButton() }
       </div>
     </div>
   );

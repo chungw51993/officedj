@@ -15,10 +15,11 @@ class AuthController {
   constructor() {
     this.logger = Logger.getLogger('AuthController');
     this.handleSpotifyCallback = this.handleSpotifyCallback.bind(this);
+    this.changeStateTimeoutId = null;
   }
 
   handleSpotifyAuth(req, res) {
-    const scopes = 'user-read-email user-read-playback-state user-modify-playback-state user-read-currently-playing playlist-modify-private playlist-read-private ugc-image-upload';
+    const scopes = 'user-read-email user-read-playback-state user-modify-playback-state user-read-currently-playing';
     res.redirect(`https://accounts.spotify.com/authorize?response_type=code&client_id=${SPOTIFY_CLIENT_ID}&scope=${encodeURIComponent(scopes)}&redirect_uri=${encodeURIComponent(SPOTIFY_REDIRECT_URL)}`);
   }
 
@@ -31,7 +32,10 @@ class AuthController {
         djDelta.set('error', query.error);
       } else if (query.code) {
         const currentUser = await spotify.setUserClient(query.code);
-        await djDelta.set('user', currentUser);
+        await djDelta.setState({
+          user: currentUser,
+          state: 'hostFound',
+        });
       }
       res.redirect(CLIENT_URL);
     } catch (err) {
