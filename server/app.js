@@ -28,7 +28,9 @@ app.get('/health', (req, res) => {
 
 app.use(router);
 
-app.use(express.static(path.join(__dirname, '..', 'client', 'build')));
+if (process.env.NODE_ENV === 'PROD') {
+  app.use(express.static(path.join(__dirname, 'build')));
+}
 
 export default {
   io,
