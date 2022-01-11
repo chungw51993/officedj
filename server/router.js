@@ -1,6 +1,7 @@
 import { Router } from 'express';
 
 import authController from './controller/authController';
+import hostController from './controller/hostController';
 import slackController from './controller/slackController';
 
 const router = Router();
@@ -8,6 +9,9 @@ const router = Router();
 router.get('/auth/spotify', authController.handleSpotifyAuth);
 
 router.get('/auth/spotify/callback', authController.handleSpotifyCallback);
+
+router.get('/host/current', hostController.handleGetCurrentHost);
+router.put('/host/reset', hostController.handleResetHost);
 
 router.post('/slack/help', slackController.handleHelp);
 

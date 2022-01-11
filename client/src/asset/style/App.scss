@@ -13,10 +13,26 @@
   }
   .button-container {
     margin-top: 25px;
-    .loading-container {
-      color: $WHITE;
-      font-size: 1.125rem;
-      font-weight: 500;
+    .hosted-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      .hc-text {
+        color: $WHITE;
+        font-size: 1.125rem;
+        font-weight: 500;
+        margin-bottom: 12px;
+      }
+      .hc-button {
+        display: flex;
+        align-items: center;
+        background-color: $BASIL100;
+        padding: 16px 24px;
+        border-radius: 40px;
+        color: $WHITE;
+        font-weight: 500;
+        font-size: 24px;
+      }
     }
     .login-button {
       display: flex;
@@ -30,7 +46,6 @@
       }
       .btn-text {
         color: $WHITE;
-
         font-weight: 500;
         font-size: 24px;
       }
