@@ -276,5 +276,4 @@ class SlackController {
   }
 }
 
-
 export default new SlackController();

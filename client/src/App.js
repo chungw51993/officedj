@@ -1,13 +1,14 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import Lottie from 'react-lottie';
+import axios from 'axios';
+
+import ResetPopup from './ResetPopup';
 
 import initialState from './lib/initialState';
-import SocketClient from './lib/socket';
 
 import './asset/style/App.scss';
 
 import deltaThinkingAnim from './asset/animation/delta-thinking.json';
-import deltaGoodBadAnim from './asset/animation/delta-good-bad.json';
 
 import spotifyImg from './asset/img/spotify.png';
 
@@ -17,52 +18,55 @@ const {
 
 const App = () => {
   const [state, setState] = useState(initialState());
-  const socket = useRef(new SocketClient()).current;
 
   useEffect(() => {
-    initializeSocket();
-  });
+    getCurrentHost();
+  }, []);
 
-  const initializeSocket = async () => {
-    try {
-      await socket.init();
-      socket.on('current:state', handleCurrentState);
-    } catch(err) {
-      console.error(err);
-    }
-  }
-
-  const handleCurrentState = (data) => {
-    const {
-      state: s,
-      user,
-    } = data;
+  const changeState = (field, value) => {
     const newState = {
       ...state,
-      state: s,
-      user,
+      [field]: value,
     };
     setState(newState);
   }
 
+  const getCurrentHost = async () => {
+    const { data } = await axios({
+      method: 'GET',
+      url: '/host/current',
+    });
+    if (data.display_name) {
+      changeState('host', data);
+    }
+  }
+
+  const resetHost = async () => {
+    await axios({
+      method: 'PUT',
+      url: '/host/reset',
+    });
+    changeState('host', {});
+    changeState('showResetPopup', false);
+  }
+
   const loggingIn = () => {
-    socket.emit('change:state', { state: 'loggingIn' });
     window.location.href = `${API_URL}/auth/spotify`;
   }
 
   const renderButton = () => {
-    if (state.state === 'loggingIn') {
+    if (state.host.display_name) {
       return (
-        <div className="loading-container">
-          Someone is volunteering to be a host...
-        </div>
-      );
-    }
-
-    if (state.state === 'hostFound') {
-      return (
-        <div className="loading-container">
-          {state.user.email} is currently hosting DJ Delta
+        <div className="hosted-container">
+          <div className="hc-text">
+            {state.host.display_name} is currently hosting DJ Delta
+          </div>
+          <button
+            className="hc-button"
+            onClick={() =>changeState('showResetPopup', true)}
+          >
+            RESET HOST
+          </button>
         </div>
       );
     }
@@ -102,6 +106,12 @@ const App = () => {
       <div className="button-container">
         { renderButton() }
       </div>
+      <ResetPopup
+        show={state.showResetPopup}
+        host={state.host}
+        close={() => changeState('showResetPopup', false)}
+        reset={resetHost}
+      />
     </div>
   );
 };
