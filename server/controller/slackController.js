@@ -1,4 +1,5 @@
 import slack from '../util/slackClient';
+import trivia from '../util/triviaClient';
 import djDelta from '../state/djDelta';
 import {
   help,
@@ -19,6 +20,10 @@ import {
   currentHost,
   confirmReset,
   deltaReset,
+  triviaQuestion,
+  sendTriviaQuestion,
+  triviaAnswerCorrect,
+  triviaAnswerWrong,
 } from '../helper/formSlackBlock';
 
 import spotifyController from './spotifyController';
@@ -177,6 +182,22 @@ class SlackController {
     res.status(200).send();
   }
 
+  handleTrivia(req, res) {
+    try {
+      const {
+        user_id: userId,
+        text,
+      } = req.body;
+      slack.postEphemeral(userId, triviaQuestion());
+      res.status(200).send();
+    } catch (err) {
+      this.logger.error(err);
+      res.status(500).json({
+        err,
+      });
+    }
+  }
+
   async handleButton(req, res) {
     try {
       const {
@@ -205,6 +226,10 @@ class SlackController {
           this.handleAddTrack(userId, data);
         } else if (action === 'resetState') {
           this.handleResetState(userId);
+        } else if (action === 'triviaQuestion') {
+          this.handleTriviaQuestion(userId, data);
+        } else if (action === 'triviaAnswer') {
+          this.handleTriviaAnswer(userId, data);
         }
       }
 
@@ -227,6 +252,27 @@ class SlackController {
     djDelta.resetToInitialState();
     await spotifyController.resetUser();
     slack.postMessage(userId, deltaReset(userId));
+  }
+
+  async handleTriviaQuestion(userId, data) {
+    const {
+      difficulty,
+    } = data;
+    const question = await trivia.getTriviaQuestion(difficulty);
+    slack.postEphemeral(userId, sendTriviaQuestion(question));
+  }
+
+  async handleTriviaAnswer(userId, data) {
+    const {
+      answer,
+      correctAnswer,
+      difficulty,
+    } = data;
+    if (answer === correctAnswer) {
+      slack.postMessage(userId, triviaAnswerCorrect(userId, difficulty));
+    } else {
+      slack.postEphemeral(userId, triviaAnswerWrong(userId, answer, correctAnswer));
+    }
   }
 }
 

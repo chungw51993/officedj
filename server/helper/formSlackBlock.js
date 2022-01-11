@@ -1,3 +1,5 @@
+import { decode } from 'html-entities';
+
 const {
   CLIENT_URL,
 } = process.env;
@@ -429,4 +431,163 @@ export const deltaReset = (userId) => {
       text: `:cd:*Record Scratch*:cd: <@${userId}> just pressed the RESET button!\nResetting to factory setting...\nPlease visit ${CLIENT_URL} to become a host.`,
     },
   }];
-}
+};
+
+export const triviaQuestion = () => {
+  return [{
+    type: 'section',
+    text: {
+      type: 'mrkdwn',
+      text: 'What difficulty of trivia question would you like?\nReward will be\n1 DeltaCoin for EASY trivia\n2 DeltaCoin for MEDIUM trivia\n3 DeltaCoin for HARD trivia',
+    },
+  }, {
+    type: 'actions',
+    elements: [{
+      type: 'button',
+      style: 'primary',
+      text: {
+        type: 'plain_text',
+        text: 'EASY',
+      },
+      value: JSON.stringify({
+        action: 'triviaQuestion',
+        difficulty: 'easy',
+      }),
+    }, {
+      type: 'button',
+      text: {
+        type: 'plain_text',
+        text: 'MEDIUM',
+      },
+      value: JSON.stringify({
+        action: 'triviaQuestion',
+        difficulty: 'medium',
+      }),
+    }, {
+      type: 'button',
+      style: 'danger',
+      text: {
+        type: 'plain_text',
+        text: 'HARD',
+      },
+      value: JSON.stringify({
+        action: 'triviaQuestion',
+        difficulty: 'hard',
+      }),
+    }],
+  }, {
+    type: 'actions',
+    elements: [{
+      type: 'button',
+      text: {
+        type: 'plain_text',
+        text: 'Cancel',
+      },
+      value: 'ignore',
+    }],
+  }];
+};
+
+export const sendTriviaQuestion = (trivia) => {
+  const {
+    category,
+    difficulty,
+    question,
+    correct_answer,
+    incorrect_answers,
+  } = trivia;
+  incorrect_answers.push(correct_answer);
+  const answers = incorrect_answers.map((ans) => decode(ans));
+  for (let i = answers.length - 1; i < 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    const temp = answers[i];
+    answers[i] = answers[j];
+    answers[j] = temp;
+  }
+  const q = decode(question);
+  const correctAnswer = decode(correct_answer);
+  const buttons = [];
+  answers.forEach((answer) => {
+    buttons.push({
+      type: 'button',
+      text: {
+        type: 'plain_text',
+        text: answer,
+      },
+      value: JSON.stringify({
+        action: 'triviaAnswer',
+        answer,
+        correctAnswer,
+        question: q,
+        category,
+        difficulty,
+      }),
+    });
+  });
+  return [{
+    type: 'section',
+    text: {
+      type: 'mrkdwn',
+      text: `Difficulty: *${difficulty.toUpperCase()}*`,
+    },
+  }, {
+    type: 'section',
+    text: {
+      type: 'mrkdwn',
+      text: `Category: *${category}*`,
+    },
+  }, {
+    type: 'section',
+    text: {
+      type: 'mrkdwn',
+      text: `*${q}*`,
+    },
+  }, {
+    type: 'actions',
+    elements: buttons,
+  }];
+};
+
+export const triviaAnswerCorrect = (userId, difficulty) => {
+  let coinCount = 1;
+  if (difficulty === 'hard') {
+    coinCount = 3;
+  } else if (difficulty === 'medium') {
+    coinCount = 2;
+  }
+  return [{
+    type: 'section',
+    text: {
+      type: 'mrkdwn',
+      text: `*Cha Ching!* <@${userId}> just earned ${coinCount} DeltaCoin by answering a trivia question!`,
+    },
+  }];
+};
+
+export const triviaAnswerWrong = (userId, answer, correctAnswer) => {
+  const responses = [
+    `Awww unfortunately ${answer} was not the right answer. Correct answer is ${correctAnswer}.`,
+    `${answer} was a good guess but correct answer is ${correctAnswer}.`,
+    `Nope ${answer} was not the correct answer. Google tells me the correct answer is ${correctAnswer}.`,
+    `${answer} is correct... NOT! The correct answer is ${correctAnswer}`,
+  ];
+  const randomIdx = Math.floor(Math.random() * responses.length);
+  const text = responses[randomIdx];
+  return [{
+    type: 'section',
+    text: {
+      type: 'mrkdwn',
+      text,
+    },
+  }, {
+    type: 'actions',
+    elements: [{
+      type: 'button',
+      text: {
+        type: 'plain_text',
+        text: 'Fine',
+      },
+      value: 'ignore',
+    }],
+  }];
+};

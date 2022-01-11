@@ -15,7 +15,6 @@ class AuthController {
   constructor() {
     this.logger = Logger.getLogger('AuthController');
     this.handleSpotifyCallback = this.handleSpotifyCallback.bind(this);
-    this.changeStateTimeoutId = null;
   }
 
   handleSpotifyAuth(req, res) {
