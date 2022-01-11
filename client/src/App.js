@@ -34,7 +34,7 @@ const App = () => {
   const getCurrentHost = async () => {
     const { data } = await axios({
       method: 'GET',
-      url: 'http://localhost:1337/host/current',
+      url: '/host/current',
     });
     if (data.display_name) {
       changeState('host', data);
@@ -44,7 +44,7 @@ const App = () => {
   const resetHost = async () => {
     await axios({
       method: 'PUT',
-      url: 'http://localhost:1337/host/reset',
+      url: '/host/reset',
     });
     changeState('host', {});
     changeState('showResetPopup', false);
