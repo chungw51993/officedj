@@ -6,7 +6,9 @@
   "scripts": {
     "start": "concurrently \"npm run server\" \"npm run client\"",
     "client": "npm start --prefix client",
-    "server": "nodemon bin/www"
+    "build:prod": "npm run build --prefix client && BABEL_ENV=production babel server -d dist",
+    "server": "nodemon bin/www",
+    "lint": "eslint ."
   },
   "repository": {
     "type": "git",
@@ -19,10 +21,18 @@
   },
   "homepage": "https://github.com/chungw51993/officedj#readme",
   "dependencies": {
+    "@slack/web-api": "^5.14.0",
+    "axios": "^0.21.1",
     "body-parser": "^1.19.0",
     "concurrently": "^5.3.0",
     "dotenv": "^8.1.0",
-    "express": "^4.17.1"
+    "express": "^4.17.1",
+    "log4js": "^6.3.0",
+    "moment": "^2.29.1",
+    "qs": "^6.9.4",
+    "redis": "^3.1.2",
+    "socket.io": "^3.0.4",
+    "spotify-web-api-node": "^5.0.0"
   },
   "devDependencies": {
     "@babel/cli": "^7.5.5",
@@ -34,11 +44,15 @@
     "babel-eslint": "^10.0.3",
     "babel-plugin-minify-builtins": "^0.5.0",
     "babel-preset-minify": "^0.5.1",
-    "eslint": "^6.5.1",
-    "eslint-config-airbnb": "^17.1.1",
+    "eslint": "^7.29.0",
+    "eslint-config-airbnb": "^18.2.1",
     "eslint-plugin-import": "^2.18.2",
     "eslint-plugin-jsx-a11y": "^6.2.3",
     "eslint-plugin-react": "^7.14.3",
     "nodemon": "^1.19.2"
+  },
+  "optionalDependencies": {
+    "bufferutil": "^4.0.2",
+    "utf-8-validate": "^5.0.3"
   }
 }

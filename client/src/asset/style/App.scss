@@ -1,0 +1,54 @@
+@import './variables.scss';
+
+.App {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background-color: $BLACK;
+  .image-container {
+    background-color: $N100;
+    border-radius: 50%;
+  }
+  .button-container {
+    margin-top: 25px;
+    .hosted-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      .hc-text {
+        color: $WHITE;
+        font-size: 1.125rem;
+        font-weight: 500;
+        margin-bottom: 12px;
+      }
+      .hc-button {
+        display: flex;
+        align-items: center;
+        background-color: $BASIL100;
+        padding: 16px 24px;
+        border-radius: 40px;
+        color: $WHITE;
+        font-weight: 500;
+        font-size: 24px;
+      }
+    }
+    .login-button {
+      display: flex;
+      align-items: center;
+      background-color: $BASIL100;
+      padding: 16px 24px;
+      border-radius: 40px;
+      .spotify {
+        width: 30px;
+        margin-right: 12px;
+      }
+      .btn-text {
+        color: $WHITE;
+        font-weight: 500;
+        font-size: 24px;
+      }
+    }
+  }
+}

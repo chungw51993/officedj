@@ -1,31 +1,38 @@
-import express from 'express';
+import express, { Router } from 'express';
 import bodyParser from 'body-parser';
+import http from 'http';
+import path from 'path';
+import { Server } from 'socket.io';
 
-import routes from './routes';
+import handleCORS from './middleware/handleCORS';
+import logRequest from './middleware/logRequest';
 
-require('dotenv').config();
+import router from './router';
 
 const app = express();
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: 'http://localhost:3000',
+    methods: ['GET', 'POST'],
+  },
+});
 
-app.use(bodyParser.json({ limit: '10mb' }));
-
-const allowCrossDomain = (req, res, next) => {
-  res.header('Access-Control-Allow-Credentials', true);
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept,Authorization');
-
-  if (req.method === 'OPTIONS') {
-    res.sendStatus(200);
-  } else {
-    next();
-  }
-};
-
-app.use(allowCrossDomain);
+app.use(handleCORS);
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(logRequest);
 
 app.get('/health', (req, res) => {
   res.sendStatus(200);
 });
 
-export default app;
+app.use(router);
+
+if (process.env.NODE_ENV === 'PROD') {
+  app.use(express.static(path.join(__dirname, 'build')));
+}
+
+export default {
+  io,
+  server,
+};
