@@ -1,8 +1,6 @@
 const initialState = () => ({
-  state: 'loading',
-  playlist: [],
-  current: [],
-  gong: 0,
+  host: {},
+  showResetPopup: false,
 });
 
 export default initialState;
