@@ -1,5 +1,4 @@
-import slack from '../util/slackClient';
-import trivia from '../util/triviaClient';
+import slackClient from '../util/slackClient';
 import djDelta from '../state/djDelta';
 import {
   help,
@@ -20,19 +19,22 @@ import {
   currentHost,
   confirmReset,
   deltaReset,
-  triviaQuestion,
-  sendTriviaQuestion,
-  triviaAnswerCorrect,
-  triviaAnswerWrong,
-} from '../helper/formSlackBlock';
+} from '../helper/formOfficeDJBlock';
 
 import spotifyController from './spotifyController';
 
 import Logger from '../util/logger';
 
-class SlackController {
+const {
+  OFFICEDJ_CHANNEL_ID,
+  OFFICEDJ_APP_TOKEN,
+} = process.env;
+
+const slack = new slackClient(OFFICEDJ_CHANNEL_ID, OFFICEDJ_APP_TOKEN)
+
+class OfficeDJController {
   constructor() {
-    this.logger = Logger.getLogger('SlackController');
+    this.logger = Logger.getLogger('OfficeDJController');
     this.handleLookup = this.handleLookup.bind(this);
     this.handleGong = this.handleGong.bind(this);
     this.handleButton = this.handleButton.bind(this);
@@ -182,64 +184,37 @@ class SlackController {
     res.status(200).send();
   }
 
-  handleTrivia(req, res) {
-    try {
-      const {
-        user_id: userId,
-        text,
-      } = req.body;
-      slack.postEphemeral(userId, triviaQuestion());
-      res.status(200).send();
-    } catch (err) {
-      this.logger.error(err);
-      res.status(500).json({
-        err,
-      });
-    }
-  }
+  handleButton(req, res) {
+    const {
+      payload,
+    } = req.body;
+    const {
+      response_url: responseUrl,
+      actions,
+      user: {
+        id: userId,
+      },
+    } = JSON.parse(payload);
 
-  async handleButton(req, res) {
-    try {
-      const {
-        payload,
-      } = req.body;
-      const {
-        response_url: responseUrl,
-        actions,
-        user: {
-          id: userId,
-        },
-      } = JSON.parse(payload);
+    slack.deleteOriginalMessage(responseUrl);
 
-      slack.deleteOriginalMessage(responseUrl);
-
-      const [action] = actions;
+    const [action] = actions;
+    const {
+      value,
+    } = action;
+    if (value !== 'ignore') {
       const {
-        value,
-      } = action;
-      if (value !== 'ignore') {
-        const {
-          action,
-          ...data
-        } = JSON.parse(value);
-        if (action === 'addTrack') {
-          this.handleAddTrack(userId, data);
-        } else if (action === 'resetState') {
-          this.handleResetState(userId);
-        } else if (action === 'triviaQuestion') {
-          this.handleTriviaQuestion(userId, data);
-        } else if (action === 'triviaAnswer') {
-          this.handleTriviaAnswer(userId, data);
-        }
+        action,
+        ...data
+      } = JSON.parse(value);
+      if (action === 'addTrack') {
+        this.handleAddTrack(userId, data);
+      } else if (action === 'resetState') {
+        this.handleResetState(userId);
       }
-
-      res.status(200).send();
-    } catch (err) {
-      this.logger.error(err);
-      res.status(500).json({
-        err,
-      });
     }
+
+    res.status(200).send();
   }
 
   async handleAddTrack(userId, data) {
@@ -253,27 +228,6 @@ class SlackController {
     await spotifyController.resetUser();
     slack.postMessage(userId, deltaReset(userId));
   }
-
-  async handleTriviaQuestion(userId, data) {
-    const {
-      difficulty,
-    } = data;
-    const question = await trivia.getTriviaQuestion(difficulty);
-    slack.postEphemeral(userId, sendTriviaQuestion(question));
-  }
-
-  async handleTriviaAnswer(userId, data) {
-    const {
-      answer,
-      correctAnswer,
-      difficulty,
-    } = data;
-    if (answer === correctAnswer) {
-      slack.postMessage(userId, triviaAnswerCorrect(userId, difficulty));
-    } else {
-      slack.postEphemeral(userId, triviaAnswerWrong(userId, answer, correctAnswer));
-    }
-  }
 }
 
-export default new SlackController();
+export default new OfficeDJController();

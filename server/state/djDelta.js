@@ -34,15 +34,6 @@ class DJDelta {
     return null;
   }
 
-  async set(field, value) {
-    if (this.state[field] !== undefined) {
-      this.state[field] = value;
-      await redis.setObject('djDeltaState', this.state);
-      return true;
-    }
-    return false;
-  }
-
   async setState(state) {
     Object.keys(state).forEach((key) => {
       if (this.state[key] !== undefined) {

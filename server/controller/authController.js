@@ -28,7 +28,9 @@ class AuthController {
     } = req;
     try {
       if (query.error) {
-        djDelta.set('error', query.error);
+        await djDelta.setState({
+          'error': query.error,
+        });
       } else if (query.code) {
         const currentUser = await spotify.setUserClient(query.code);
         await djDelta.setState({
