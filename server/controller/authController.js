@@ -15,7 +15,6 @@ class AuthController {
   constructor() {
     this.logger = Logger.getLogger('AuthController');
     this.handleSpotifyCallback = this.handleSpotifyCallback.bind(this);
-    this.changeStateTimeoutId = null;
   }
 
   handleSpotifyAuth(req, res) {
@@ -29,7 +28,9 @@ class AuthController {
     } = req;
     try {
       if (query.error) {
-        djDelta.set('error', query.error);
+        await djDelta.setState({
+          'error': query.error,
+        });
       } else if (query.code) {
         const currentUser = await spotify.setUserClient(query.code);
         await djDelta.setState({

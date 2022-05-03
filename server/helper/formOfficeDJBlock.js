@@ -429,4 +429,4 @@ export const deltaReset = (userId) => {
       text: `:cd:*Record Scratch*:cd: <@${userId}> just pressed the RESET button!\nResetting to factory setting...\nPlease visit ${CLIENT_URL} to become a host.`,
     },
   }];
-}
+};

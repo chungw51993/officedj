@@ -1,33 +1,44 @@
 import axios from 'axios';
 import { WebClient } from '@slack/web-api';
 
-const {
-  SLACK_CHANNEL_ID,
-  SLACK_APP_TOKEN,
-} = process.env;
-
 class SlackClient {
-  constructor() {
-    this.slackClient = new WebClient(SLACK_APP_TOKEN);
-    this.slackChannel = SLACK_CHANNEL_ID;
+  constructor(channelId, appToken) {
+    this.slackChannel = channelId;
+    this.slackClient = new WebClient(appToken);
   }
 
-  postEphemeral(userId, blocks) {
+  async getAllChannelMembers() {
+    const options = {
+      channel: this.slackChannel,
+    };
+    return await this.slackClient.conversations.members(options);
+  }
+
+  async postEphemeral(userId, blocks) {
     const message = {
       channel: this.slackChannel,
       user: userId,
       blocks,
-    }
-    this.slackClient.chat.postEphemeral(message);
+    };
+    return await this.slackClient.chat.postEphemeral(message);
   }
 
-  postMessage(userId, blocks) {
+  async postMessage(userId, blocks) {
     const message = {
       channel: this.slackChannel,
       user: userId,
       blocks,
-    }
-    this.slackClient.chat.postMessage(message);
+    };
+    return await this.slackClient.chat.postMessage(message);
+  }
+
+  async updateMessage(timestamp, blocks) {
+    const message = {
+      channel: this.slackChannel,
+      ts: timestamp,
+      blocks,
+    };
+    return await this.slackClient.chat.update(message);
   }
 
   deleteOriginalMessage(responseUrl) {
@@ -37,4 +48,4 @@ class SlackClient {
   }
 }
 
-export default new SlackClient();
+export default SlackClient;
