@@ -315,4 +315,30 @@ export const sendEndRound = (currentPlayers) => {
     blocks.push(...correctResponse);
   }
   return blocks;
-}
+};
+
+export const sendWrongPassword = () => {
+  const responses = [
+    'WRONG! Try to guess harder next time',
+    'You were just off by one character I swear',
+    'You\'ll never get it right!',
+  ];
+  const randomIdx = Math.floor(Math.random() * responses.length);
+  return [{
+    type: 'section',
+    text: {
+      type: 'mrkdwn',
+      text: responses[randomIdx],
+    },
+  }, {
+    type: 'actions',
+    elements: [{
+      type: 'button',
+      text: {
+        type: 'plain_text',
+        text: 'I\'m sorry for hacking',
+      },
+      value: 'ignore',
+    }],
+  }];
+};

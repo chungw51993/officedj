@@ -12,6 +12,7 @@ import {
   sendCorrectAnswer,
   sendYouAnswered,
   sendEndRound,
+  sendWrongPassword,
 } from '../helper/formTriviaBlock';
 
 import spotifyController from './spotifyController';
@@ -32,11 +33,11 @@ const slack = new slackClient(TRIVIA_CHANNEL_ID, TRIVIA_APP_TOKEN);
 class TriviaController {
   constructor() {
     this.logger = Logger.getLogger('TriviaController');
+    this.handleStart = this.handleStart.bind(this);
     this.handleButton = this.handleButton.bind(this);
     this.sendTriviaQuestion = this.sendTriviaQuestion.bind(this);
     this.countDownAnswer = this.countDownAnswer.bind(this);
     this.sendCorrectAnswer = this.sendCorrectAnswer.bind(this);
-    this.handleStart();
   }
 
   handleHelp(req, res) {
@@ -59,27 +60,51 @@ class TriviaController {
     slack.postMessage(null, startReminder());
   }
 
-  async handleStart() {
-    const { members } = await slack.getAllChannelMembers();
-    const currentPlayers = {};
-    members.forEach((id) => {
-      currentPlayers[id] = {
-        answers: [],
-        score: 0,
-      };
-    })
-    await trivia.setState({
-      currentRound: 1,
-      currentGameId: uuidv4(),
-      currentPlayers,
-      state: 'started',
-    });
-
-    const messages = triviaStarted();
-    sendMultipleMessages(messages, 2000, this.sendTriviaQuestion);
+  async handleStart(req, res) {
+    let start = false;
+    let id = null;
+    if (req) {
+      const {
+        text,
+        user_id: userId,
+      } = req.body;
+      if (text === 'FuckOff!') {
+        start = true;
+      } else {
+        id = userId;
+      }
+    } else {
+      start = true;
+    }
+    console.log(start);
+    if (start) {
+      const { members } = await slack.getAllChannelMembers();
+      const currentPlayers = {};
+      members.forEach((id) => {
+        currentPlayers[id] = {
+          answers: [],
+          score: 0,
+        };
+      })
+      await trivia.setState({
+        currentRound: 1,
+        currentGameId: uuidv4(),
+        currentPlayers,
+        state: 'started',
+      });
+      console.log(members);
+      const messages = triviaStarted();
+      sendMultipleMessages(messages, 2000, this.sendTriviaQuestion);
+    } else if (id) {
+      slack.postEphemeral(id, sendWrongPassword());
+    }
+    if (res) {
+      res.status(200).send();
+    }
   }
 
   async sendTriviaQuestion() {
+    console.log('SENDING TRIVAI QUESTION');
     const randomIdx = Math.floor(Math.random() * categories.length);
     const randomCategory = categories[randomIdx];
     const currentGameId = trivia.get('currentGameId');
