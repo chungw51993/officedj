@@ -76,7 +76,6 @@ class TriviaController {
     } else {
       start = true;
     }
-    console.log(start);
     if (start) {
       const { members } = await slack.getAllChannelMembers();
       const currentPlayers = {};
@@ -92,7 +91,6 @@ class TriviaController {
         currentPlayers,
         state: 'started',
       });
-      console.log(members);
       const messages = triviaStarted();
       sendMultipleMessages(messages, 2000, this.sendTriviaQuestion);
     } else if (id) {
@@ -104,7 +102,6 @@ class TriviaController {
   }
 
   async sendTriviaQuestion() {
-    console.log('SENDING TRIVAI QUESTION');
     const randomIdx = Math.floor(Math.random() * categories.length);
     const randomCategory = categories[randomIdx];
     const currentGameId = trivia.get('currentGameId');
