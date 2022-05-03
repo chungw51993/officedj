@@ -202,8 +202,7 @@ export const alreadyGonged = (userId) => {
     'Look like you\'re all out of gongs, your next gong is going to cost 99 cents. Just kidding! But seriously you can only gong once per song.',
     'Unfortunately there is a one gong per song policy. To change the policy please start a petition and submit it to my creator.',
   ];
-  const randomIdx = Math.floor(Math.random() * responses.length);
-  const text = responses[randomIdx];
+  const text = responses[0];
   return [{
     type: 'section',
     text: {

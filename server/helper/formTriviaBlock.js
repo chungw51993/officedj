@@ -75,13 +75,11 @@ export const startReminder = () => {
     'Trivia is about to start in 5 mins so please get ready!',
     ':loudspeaker: Trivia commences in 5 minutes',
   ];
-  const randomIdx = Math.floor(Math.random() * responses.length);
-  const text = responses[randomIdx];
   return [{
     type: 'section',
     text: {
       type: 'mrkdwn',
-      text,
+      text: responses[0],
     },
   }];
 };
@@ -177,12 +175,12 @@ export const sendTriviaAnswers = (gameId, trivia) => {
   } = trivia;
   incorrect_answers.push(correct_answer);
   const answers = incorrect_answers.map((ans) => decode(ans));
-  for (let i = answers.length - 1; i < 0; i -= 1) {
-    const j = Math.floor(Math.random() * (i + 1));
-    const temp = answers[i];
-    answers[i] = answers[j];
-    answers[j] = temp;
-  }
+  // for (let i = answers.length - 1; i < 0; i -= 1) {
+  //   const j = Math.floor(Math.random() * (i + 1));
+  //   const temp = answers[i];
+  //   answers[i] = answers[j];
+  //   answers[j] = temp;
+  // }
   const q = decode(question);
   const correctAnswer = decode(correct_answer);
   const buttons = [];
@@ -276,9 +274,7 @@ export const sendEndRound = (currentPlayers) => {
       },
     }],
   ];
-  const randomIdx = Math.floor(Math.random() * responses.length);
-  const nRandomIdx = Math.floor(Math.random() * nobodyResponses.length);
-  const text = responses[randomIdx];
+  const text = responses[0];
   const blocks = [{
     type: 'section',
     text: {
@@ -287,7 +283,7 @@ export const sendEndRound = (currentPlayers) => {
     },
   }];
   if (contestants.length === 0) {
-    const nobodyTexts = nobodyResponses[nRandomIdx];
+    const nobodyTexts = nobodyResponses[0];
     blocks.push(...nobodyTexts);
   } else {
     contestants.forEach((p) => {
@@ -323,12 +319,11 @@ export const sendWrongPassword = () => {
     'You were just off by one character I swear',
     'You\'ll never get it right!',
   ];
-  const randomIdx = Math.floor(Math.random() * responses.length);
   return [{
     type: 'section',
     text: {
       type: 'mrkdwn',
-      text: responses[randomIdx],
+      text: responses[0],
     },
   }, {
     type: 'actions',
