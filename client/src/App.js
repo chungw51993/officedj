@@ -34,7 +34,7 @@ const App = () => {
   const getCurrentHost = async () => {
     const { data } = await axios({
       method: 'GET',
-      url: '/host/current',
+      url: '/officedj/host/current',
     });
     if (data.display_name) {
       changeState('host', data);
@@ -44,14 +44,14 @@ const App = () => {
   const resetHost = async () => {
     await axios({
       method: 'PUT',
-      url: '/host/reset',
+      url: '/officedj/host/reset',
     });
     changeState('host', {});
     changeState('showResetPopup', false);
   }
 
   const loggingIn = () => {
-    window.location.href = `${API_URL}/auth/spotify`;
+    window.location.href = `${API_URL}/officedj/auth/spotify`;
   }
 
   const renderButton = () => {
