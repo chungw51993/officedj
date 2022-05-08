@@ -2,76 +2,76 @@ const categories = [{
   "label": "Any",
   "value": "any"
 }, {
-  "label": "General Knowledge :brain:",
+  "label": ":brain: General Knowledge",
   "value": "9"
 }, {
-  "label": "Books :books:",
+  "label": ":books: Books",
   "value": "10"
 }, {
-  "label": "Film :movie_camera:",
+  "label": ":movie_camera: Film",
   "value": "11"
 }, {
-  "label": "Music :musical_score:",
+  "label": ":musical_score: Music",
   "value": "12"
 }, {
-  "label": "Musicals & Theatres :performing_arts:",
+  "label": ":performing_arts: Musicals & Theatres",
   "value": "13"
 }, {
-  "label": "Television :tv:",
+  "label": ":tv: Television",
   "value": "14"
 }, {
-  "label": "Video Games :video_game:",
+  "label": ":video_game: Video Games",
   "value": "15"
 }, {
-  "label": "Board Games :game_die:",
+  "label": ":game_die: Board Games",
   "value": "16"
 }, {
-  "label": "Science & Nature :microscope:",
+  "label": ":microscope: Science & Nature",
   "value": "17"
 }, {
-  "label": "Computers :computer:",
+  "label": ":computer: Computers",
   "value": "18"
 }, {
-  "label": "Mathematics :heavy_division_sign:",
+  "label": ":heavy_division_sign: Mathematics",
   "value": "19"
 }, {
-  "label": "Mythology :unicorn_face:",
+  "label": ":unicorn_face: Mythology",
   "value": "20"
 }, {
-  "label": "Sports :soccer:",
+  "label": ":soccer: Sports",
   "value": "21"
 }, {
-  "label": "Geography :earth_americas:",
+  "label": ":earth_americas: Geography",
   "value": "22"
 }, {
-  "label": "History :scroll:",
+  "label": ":scroll: History",
   "value": "23"
 }, {
-  "label": "Politics :female-office-worker:",
+  "label": ":female-office-worker: Politics",
   "value": "24"
 }, {
-  "label": "Art :art:",
+  "label": ":art: Art",
   "value": "25"
 }, {
-  "label": "Celebrities :princess:",
+  "label": ":princess: Celebrities",
   "value": "26"
 }, {
-  "label": "Animals :tiger:",
+  "label": ":tiger: Animals",
   "value": "27"
 }, {
-  "label": "Vehicles :racing_car:",
+  "label": ":racing_car: Vehicles",
   "value": "28"
 }, {
-  "label": "Comics :superhero:",
+  "label": ":superhero: Comics",
   "value": "29"
 }, {
-  "label": "Gadgets :nut_and_bolt:",
+  "label": ":nut_and_bolt: Gadgets",
   "value": "30"
 }, {
-  "label": "Anime & Manga :japanese_ogre:",
+  "label": ":japanese_ogre: Anime & Manga",
   "value": "31"
 }, {
-  "label": "Cartoon & Animations :mouse:",
+  "label": ":mouse: Cartoon & Animations",
   "value": "32"
 }];
 

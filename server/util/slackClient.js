@@ -46,6 +46,25 @@ class SlackClient {
       delete_original: true,
     });
   }
+
+  formTextSections(texts) {
+    if (typeof texts === 'object') {
+      return texts.map((text) => ({
+        type: 'section',
+        text: {
+          type: 'mrkdwn',
+          text,
+        },
+      }));
+    }
+    return [{
+      type: 'section',
+      text: {
+        type: 'mrkdwn',
+        text: texts,
+      },
+    }];
+  }
 }
 
 export default SlackClient;
