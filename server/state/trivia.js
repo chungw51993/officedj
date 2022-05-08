@@ -14,6 +14,7 @@ class Trivia {
       currentQuestion: {},
       currentAnswers: {},
       currentRound: 1,
+      correctAnswers: [],
       questionMessage: {},
       error: false,
       state: 'waiting',

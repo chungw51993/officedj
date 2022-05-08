@@ -9,7 +9,9 @@
   ],
   "env": {
     "production": {
-      "presets": ["minify"]
+      "presets": [
+        ["minify", { "builtIns": false }]
+      ]
     }
   }
 }

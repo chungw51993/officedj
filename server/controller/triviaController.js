@@ -92,7 +92,7 @@ class TriviaController {
         state: 'started',
       });
       const messages = triviaStarted();
-      sendMultipleMessages(messages, 2000, this.sendTriviaQuestion);
+      sendMultipleMessages(messages, 3500, this.sendTriviaQuestion);
     } else if (id) {
       slack.postEphemeral(id, sendWrongPassword());
     }
@@ -108,9 +108,9 @@ class TriviaController {
     const currentRound = trivia.get('currentRound');
     const currentPlayers = trivia.get('currentPlayers');
     let difficulty = 'easy';
-    if (currentRound >= 6) {
+    if (currentRound > 6) {
       difficulty = 'hard';
-    } else if (currentRound >= 3) {
+    } else if (currentRound > 3) {
       difficulty = 'medium';
     }
 
@@ -123,14 +123,13 @@ class TriviaController {
     trivia.setState({
       currentQuestion: question,
       questionMessage: message,
+      correctAnswers: [],
     });
 
     setTimeout(async () => {
       const postAnswers = [];
       Object.keys(currentPlayers).forEach((p) => {
-        if (currentPlayers[p].alive || currentRound === 1) {
-          postAnswers.push(slack.postEphemeral(p, sendTriviaAnswers(currentGameId, question)));
-        }
+        postAnswers.push(slack.postEphemeral(p, sendTriviaAnswers(currentGameId, question)));
       });
       await Promise.all(postAnswers);
       this.countDownAnswer();
@@ -187,28 +186,28 @@ class TriviaController {
     const currentQuestion = trivia.get('currentQuestion');
     const currentRound = trivia.get('currentRound');
     const currentPlayers = trivia.get('currentPlayers');
+    const correctAnswers = trivia.get('correctAnswers');
     const messages = sendCorrectAnswer(currentQuestion.correct_answer);
     await trivia.setState({
       currentRound: currentRound + 1,
     });
     await sendMultipleMessages(messages, 4000);
-    const livePlayers = [];
-    Object.keys(currentPlayers).forEach((k) => {
+    const correctPlayers = [];
+    correctAnswers.forEach((k) => {
       const {
-        alive,
         answers,
       } = currentPlayers[k];
-      if (alive && currentRound === answers.length) {
-        livePlayers.push({
-          ...currentPlayers[k],
-          id: k,
-        });
-      }
+      correctPlayers.push({
+        ...currentPlayers[k],
+        id: k,
+      });
     });
-    const endMessages = sendEndRound(livePlayers);
+    const endMessages = sendEndRound(correctPlayers);
     await sendMultipleMessages(endMessages, 2000);
-    if (livePlayers.length > 0) {
+    if (currentRound < 10) {
       this.sendTriviaQuestion();
+    } else {
+
     }
   }
 
@@ -224,8 +223,8 @@ class TriviaController {
     const currentQuestion = trivia.get('currentQuestion');
     const currentRound = trivia.get('currentRound');
     const currentPlayers = trivia.get('currentPlayers');
+    const correctAnswers = trivia.get('correctAnswers');
     if (gameId === currentGameId
-      && (currentPlayers[userId].alive || currentRound === 1)
       && currentQuestion.correct_answer === correctAnswer) {
       const qAndA = {
         question: currentQuestion,
@@ -233,14 +232,19 @@ class TriviaController {
       };
       currentPlayers[userId].answers.push(qAndA);
       if (answer === correctAnswer) {
-        currentPlayers[userId].score += 1;
-        currentPlayers[userId].alive = true;
-      } else {
-        currentPlayers[userId].alive = false;
+        let point = 1;
+        if (currentRound > 6) {
+          point = 3;
+        } else if (currentRound > 3) {
+          point = 2;
+        }
+        currentPlayers[userId].score += point;
+        correctAnswers.push(userId);
       }
       slack.postEphemeral(userId, sendYouAnswered(answer));
       trivia.setState({
         currentPlayers,
+        correctAnswers,
       });
     }
   }
