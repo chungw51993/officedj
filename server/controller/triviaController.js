@@ -17,11 +17,15 @@ import {
   sendWrongPassword,
   sendSuddenDeath,
   endGameMessages,
+  playerSelectCategory,
+  categorySelected,
+  selectCategories,
 } from '../helper/formTriviaBlock';
 
 import spotifyController from './spotifyController';
 
 import Logger from '../util/logger';
+import randomNumber from '../util/randomNumber';
 
 import categories from '../helper/triviaCategory';
 
@@ -32,6 +36,9 @@ const {
   TRIVIA_USER_ID,
   TRIVIA_APP_TOKEN,
 } = process.env;
+
+const COUNT_DOWN = 15;
+const NUM_ROUND = 10;
 
 const slack = new slackClient(TRIVIA_CHANNEL_ID, TRIVIA_APP_TOKEN);
 
@@ -124,11 +131,10 @@ class TriviaController {
   }
 
   async sendTriviaQuestion() {
-    const randomIdx = Math.floor(Math.random() * categories.length);
-    const randomCategory = categories[randomIdx];
     const currentGameId = trivia.get('currentGameId');
     const currentRound = trivia.get('currentRound');
     const currentPlayers = trivia.get('currentPlayers');
+    const selectedCategory = trivia.get('selectedCategory');
     let difficulty = 'easy';
     if (currentRound > 6) {
       difficulty = 'hard';
@@ -136,11 +142,18 @@ class TriviaController {
       difficulty = 'medium';
     }
 
-    const question = await triviaClient.getTriviaQuestion(randomCategory.value, difficulty);
-    const messages = sendTriviaQuestion(currentRound, randomCategory, question);
+    let cat = selectedCategory;
+    if (!cat.value) {
+      const randomIdx = randomNumber(categories.length);
+      const randomCategory = categories[randomIdx];
+      cat = randomCategory;
+    }
+
+    const question = await triviaClient.getTriviaQuestion(cat.value, difficulty);
+    const messages = sendTriviaQuestion(currentRound, cat, question);
     await sendMultipleMessages(messages, 3000);
 
-    const message = await delayMessage(sendAnswerCountDown(15));
+    const message = await delayMessage(sendAnswerCountDown(COUNT_DOWN));
 
     trivia.setState({
       currentQuestion: question,
@@ -183,6 +196,8 @@ class TriviaController {
       } = JSON.parse(value);
       if (action === 'triviaAnswer') {
         this.handleTriviaAnswer(userId, data);
+      } else if (action === 'categorySelect') {
+        this.handleCategory(userId, data);
       }
     }
 
@@ -190,7 +205,7 @@ class TriviaController {
   }
 
   countDownAnswer() {
-    let count = 15;
+    let count = COUNT_DOWN;
     const questionMessage = trivia.get('questionMessage');
     const intervalId = setInterval(() => {
       if (count <= 0) {
@@ -232,11 +247,31 @@ class TriviaController {
       });
     });
     const endMessages = sendEndRound(correctPlayers);
-    await sendMultipleMessages(endMessages, 2000);
-    if (currentRound < 10) {
-      this.sendTriviaQuestion();
+    await sendMultipleMessages(endMessages, 2000, () => {
+      if (currentRound < NUM_ROUND) {
+        this.nextRound();
+      } else {
+        this.endGame();
+      }
+    });
+  }
+
+  nextRound() {
+    const players = trivia.get('players');
+    const correctAnswers = trivia.get('correctAnswers');
+    if (correctAnswers.length > 0) {
+      let displayName = null;
+      if (players[correctAnswers[0]] && players[correctAnswers[0]].displayName) {
+        displayName = players[correctAnswers[0]].displayName;
+      }
+      const playerSelecting = playerSelectCategory({
+        id: correctAnswers[0],
+        displayName,
+      });
+      slack.postMessage(correctAnswers[0], playerSelecting);
+      delayEphemeralMessage(correctAnswers[0], selectCategories());
     } else {
-      this.endGame();
+      this.sendTriviaQuestion();
     }
   }
 
@@ -349,11 +384,42 @@ class TriviaController {
       });
     }
   }
+
+  async handleCategory(userId, data) {
+    const {
+      label,
+      categoryId,
+    } = data;
+    const players = trivia.get('players');
+    let displayName = null;
+    if (players[userId] && players[userId].displayName) {
+      displayName = players[userId].displayName;
+    }
+    const player = {
+      id: userId,
+      displayName,
+    };
+    await slack.postMessage(null, categorySelected(player, label));
+    await trivia.setState({
+      selectedCategory: {
+        label,
+        value: categoryId,
+      },
+    });
+    setTimeout(this.sendTriviaQuestion, 2000);
+  }
 }
 
 const delayMessage = (message, interval = 2000) => new Promise((resolve) => {
   setTimeout(() => {
     slack.postMessage(null, message)
+      .then(resolve);
+  }, interval);
+});
+
+const delayEphemeralMessage = (userId, message, interval = 2000) => new Promise((resolve) => {
+  setTimeout(() => {
+    slack.postEphemeral(userId, message)
       .then(resolve);
   }, interval);
 });
