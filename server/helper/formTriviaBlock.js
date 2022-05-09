@@ -10,7 +10,6 @@ export const help = () => {
   return [
     ...slack.formTextSections([
       '*/category*\nShows all the categories.',
-      '*/start*\nStarts the round but make sure everybody joined because nobody can join after round starts!',
       '*/set-name*\nSet display name that will be used for trivia',
       '*/show-name*\nShow current display name',
     ]),
@@ -106,13 +105,13 @@ export const noDisplayName = () => {
   ];
 };
 
-export const startReminder = () => {
+export const startReminder = (min) => {
   const responses = [
-    'Trivia is about to start in 5 mins so please get ready!',
-    ':loudspeaker: Trivia commences in 5 minutes',
+    `Trivia is about to start in ${min} mins so please get ready!`,
+    `:loudspeaker: Trivia commences in ${min} minutes`,
   ];
   const randomIdx = randomNumber(responses.length);
-  return slack.formTextBlocks(responses[randomIdx]);
+  return slack.formTextSections(responses[randomIdx]);
 };
 
 export const triviaStarted = () => {

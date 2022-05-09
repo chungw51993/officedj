@@ -1,3 +1,5 @@
+import cron from 'node-cron';
+
 import slackClient from '../util/slackClient';
 import triviaClient from '../util/triviaClient';
 import trivia from '../state/trivia';
@@ -45,11 +47,17 @@ const slack = new slackClient(TRIVIA_CHANNEL_ID, TRIVIA_APP_TOKEN);
 class TriviaController {
   constructor() {
     this.logger = Logger.getLogger('TriviaController');
+    this.handleStartReminder = this.handleStartReminder.bind(this);
     this.handleStart = this.handleStart.bind(this);
     this.handleButton = this.handleButton.bind(this);
     this.sendTriviaQuestion = this.sendTriviaQuestion.bind(this);
     this.countDownAnswer = this.countDownAnswer.bind(this);
     this.sendCorrectAnswer = this.sendCorrectAnswer.bind(this);
+
+    cron.schedule('0 55 15 * * *', this.handleStartReminder, {
+      scheduled: true,
+      timezone: 'America/Chicago',
+    });
   }
 
   handleHelp(req, res) {
@@ -102,11 +110,34 @@ class TriviaController {
     res.status(200).send();
   }
 
-  handleStartReminder() {
-    slack.postMessage(null, startReminder());
+  async handleStartReminder() {
+    const state = trivia.get('state');
+    if (state === 'waiting') {
+      const message = await slack.postMessage(null, startReminder(5));
+      await trivia.setState({
+        reminderMessage: message,
+        state: 'scheduled',
+      });
+      this.countDownReminder();
+    }
   }
 
-  async handleStart(req, res) {
+  countDownReminder() {
+    let count = 5;
+    const reminderMessage = trivia.get('reminderMessage');
+    const intervalId = setInterval(() => {
+      if (count <= 0) {
+        clearInterval(intervalId);
+      }
+      slack.updateMessage(reminderMessage.message.ts, startReminder(count));
+      count--;
+      if (count === 0) {
+        setTimeout(this.handleStart, 1000);
+      }
+    }, 60000);
+  }
+
+  async handleStart() {
     const { members } = await slack.getAllChannelMembers();
     const currentPlayers = {};
     members.forEach((id) => {
@@ -125,9 +156,6 @@ class TriviaController {
     });
     const messages = triviaStarted();
     sendMultipleMessages(messages, 3500, this.sendTriviaQuestion);
-    if (res) {
-      res.status(200).send();
-    }
   }
 
   async sendTriviaQuestion() {

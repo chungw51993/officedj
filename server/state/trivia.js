@@ -15,6 +15,7 @@ class Trivia {
       currentAnswers: {},
       currentRound: 1,
       correctAnswers: [],
+      reminderMessage: {},
       questionMessage: {},
       selectedCategory: {},
       error: false,
