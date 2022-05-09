@@ -107,7 +107,6 @@ export const noDisplayName = () => {
 
 export const startReminder = (min) => {
   const responses = [
-    `Trivia is about to start in ${min} mins so please get ready!`,
     `:loudspeaker: Trivia commences in ${min} minutes`,
   ];
   const randomIdx = randomNumber(responses.length);
