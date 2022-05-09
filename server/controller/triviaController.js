@@ -112,7 +112,7 @@ class TriviaController {
 
   async handleStartReminder(req, res) {
     const state = trivia.get('state');
-    if (((req && req.data.text === 'FuckOff!')
+    if (((req && req.body.text === 'FuckOff!')
         || !req)
         && state === 'waiting') {
       const message = await slack.postMessage(null, startReminder(5));
