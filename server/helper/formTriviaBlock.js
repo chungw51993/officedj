@@ -408,7 +408,6 @@ export const categorySelected = (player, label) => {
 export const selectCategories = () => {
   const selectCats = [];
   const cCats = categories.slice();
-  cCats.shift();
   for(var i = cCats.length-1; selectCats.length < 4; i -= 1){
     const [cat] = cCats.splice(Math.floor(Math.random() * cCats.length), 1);
     selectCats.push(cat);

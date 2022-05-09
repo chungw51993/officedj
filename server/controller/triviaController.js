@@ -110,15 +110,20 @@ class TriviaController {
     res.status(200).send();
   }
 
-  async handleStartReminder() {
+  async handleStartReminder(req, res) {
     const state = trivia.get('state');
-    if (state === 'waiting') {
+    if (((req && req.data.text === 'FuckOff!')
+        || !req)
+        && state === 'waiting') {
       const message = await slack.postMessage(null, startReminder(5));
       await trivia.setState({
         reminderMessage: message,
         state: 'scheduled',
       });
       this.countDownReminder();
+    }
+    if (res) {
+      res.status(200).send();
     }
   }
 

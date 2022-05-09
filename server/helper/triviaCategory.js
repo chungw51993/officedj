@@ -1,7 +1,4 @@
 const categories = [{
-  "label": "Any",
-  "value": "any"
-}, {
   "label": ":brain: General Knowledge",
   "value": "9"
 }, {
