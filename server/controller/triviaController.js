@@ -4,6 +4,8 @@ import trivia from '../state/trivia';
 import {
   help,
   showCategories,
+  displayNameSet,
+  noDisplayName,
   startReminder,
   triviaStarted,
   sendTriviaQuestion,
@@ -13,6 +15,8 @@ import {
   sendYouAnswered,
   sendEndRound,
   sendWrongPassword,
+  sendSuddenDeath,
+  endGameMessages,
 } from '../helper/formTriviaBlock';
 
 import spotifyController from './spotifyController';
@@ -25,6 +29,7 @@ const { v4: uuidv4 } = require('uuid');
 
 const {
   TRIVIA_CHANNEL_ID,
+  TRIVIA_USER_ID,
   TRIVIA_APP_TOKEN,
 } = process.env;
 
@@ -56,46 +61,63 @@ class TriviaController {
     res.status(200).send();
   }
 
+  async handleSetDisplayName(req, res) {
+    const {
+      user_id: userId,
+      text,
+    } = req.body;
+    const players = trivia.get('players');
+    if (players[userId]) {
+      players[userId].displayName = text;
+    } else {
+      players[userId] = {
+        displayName: text,
+        lifeTimeScore: 0,
+      };
+    }
+    await trivia.setState({
+      players,
+    });
+    slack.postEphemeral(userId, displayNameSet(text));
+    res.status(200).send();
+  }
+
+  handleShowDisplayName(req, res) {
+    const {
+      user_id: userId,
+    } = req.body;
+    const players = trivia.get('players');
+    if (players[userId] && players[userId].displayName) {
+      slack.postEphemeral(userId, displayNameSet(players[userId].displayName));
+    } else {
+      slack.postEphemeral(userId, noDisplayName());
+    }
+    res.status(200).send();
+  }
+
   handleStartReminder() {
     slack.postMessage(null, startReminder());
   }
 
   async handleStart(req, res) {
-    let start = false;
-    let id = null;
-    if (req) {
-      const {
-        text,
-        user_id: userId,
-      } = req.body;
-      if (text === 'FuckOff!') {
-        start = true;
-      } else {
-        id = userId;
-      }
-    } else {
-      start = true;
-    }
-    if (start) {
-      const { members } = await slack.getAllChannelMembers();
-      const currentPlayers = {};
-      members.forEach((id) => {
+    const { members } = await slack.getAllChannelMembers();
+    const currentPlayers = {};
+    members.forEach((id) => {
+      if (id !== TRIVIA_USER_ID) {
         currentPlayers[id] = {
           answers: [],
           score: 0,
         };
-      })
-      await trivia.setState({
-        currentRound: 1,
-        currentGameId: uuidv4(),
-        currentPlayers,
-        state: 'started',
-      });
-      const messages = triviaStarted();
-      sendMultipleMessages(messages, 3500, this.sendTriviaQuestion);
-    } else if (id) {
-      slack.postEphemeral(id, sendWrongPassword());
-    }
+      }
+    })
+    await trivia.setState({
+      currentRound: 1,
+      currentGameId: uuidv4(),
+      currentPlayers,
+      state: 'started',
+    });
+    const messages = triviaStarted();
+    sendMultipleMessages(messages, 3500, this.sendTriviaQuestion);
     if (res) {
       res.status(200).send();
     }
@@ -187,9 +209,11 @@ class TriviaController {
     const currentRound = trivia.get('currentRound');
     const currentPlayers = trivia.get('currentPlayers');
     const correctAnswers = trivia.get('correctAnswers');
+    const players = trivia.get('players');
     const messages = sendCorrectAnswer(currentQuestion.correct_answer);
     await trivia.setState({
       currentRound: currentRound + 1,
+      currentQuestion: {},
     });
     await sendMultipleMessages(messages, 4000);
     const correctPlayers = [];
@@ -197,9 +221,14 @@ class TriviaController {
       const {
         answers,
       } = currentPlayers[k];
+      let displayName = null;
+      if (players[k] && players[k].displayName) {
+        displayName = players[k].displayName;
+      }
       correctPlayers.push({
         ...currentPlayers[k],
         id: k,
+        displayName,
       });
     });
     const endMessages = sendEndRound(correctPlayers);
@@ -207,8 +236,80 @@ class TriviaController {
     if (currentRound < 10) {
       this.sendTriviaQuestion();
     } else {
-
+      this.endGame();
     }
+  }
+
+  async endGame() {
+    const currentPlayers = trivia.get('currentPlayers');
+    const players = trivia.get('players');
+    let highScore = 0;
+    const winners = [];
+    const scores = {};
+    Object.keys(currentPlayers).forEach((k) => {
+      const {
+        score,
+      } = currentPlayers[k];
+      if (score > 0) {
+        let displayName = null;
+        if (players[k] && players[k].displayName) {
+          displayName = players[k].displayName;
+        }
+        if (scores[score]) {
+          scores[score].push({
+            ...currentPlayers[k],
+            displayName,
+            id: k,
+          });
+        } else {
+          scores[score] = [{
+            ...currentPlayers[k],
+            displayName,
+            id: k,
+          }];
+        }
+        if (players[k]) {
+          players[k].lifeTimeScore += score;
+        } else {
+          players[k] = {
+            displayName: null,
+            lifeTimeScore: score,
+          };
+        }
+      }
+    });
+    const sortedScores = Object.keys(scores).sort((a, b) => b - a);
+    if (sortedScores[0] && scores[sortedScores[0]].length > 1) {
+      // TODO Figure out Sudden Death
+      const suddenDeath = sendSuddenDeath();
+      await sendMultipleMessages(suddenDeath, 2000);
+    }
+    sortedScores.forEach((score, idx) => {
+      if (idx === 0) {
+        highScore = score;
+      }
+      if (winners.length < 3) {
+        winners.unshift(scores[score]);
+      }
+    });
+    if (winners.length !== 3) {
+      for (let i = winners.length; i < 3; i += 1) {
+        winners.unshift(null);
+      }
+    }
+    const endGame = endGameMessages(highScore, winners);
+    sendMultipleMessages(endGame, 3500);
+    await trivia.setState({
+      players,
+      currentGameId: null,
+      currentPlayers: {},
+      currentQuestion: {},
+      currentAnswers: {},
+      currentRound: 1,
+      correctAnswers: [],
+      questionMessage: {},
+      state: 'waiting',
+    });
   }
 
   handleTriviaAnswer(userId, data) {

@@ -11,6 +11,8 @@ export const help = () => {
     ...slack.formTextSections([
       '*/category*\nShows all the categories.',
       '*/start*\nStarts the round but make sure everybody joined because nobody can join after round starts!',
+      '*/set-name*\nSet display name that will be used for trivia',
+      '*/show-name*\nShow current display name',
     ]),
     {
       type: 'actions',
@@ -50,6 +52,44 @@ export const showCategories = () => {
   return [
     ...blocks,
     ...sections,
+    {
+      type: 'actions',
+      elements: [
+        {
+          type: 'button',
+          text: {
+            type: 'plain_text',
+            text: 'Got it',
+          },
+          value: 'ignore',
+        },
+      ],
+    },
+  ];
+};
+
+export const displayNameSet = (name) => {
+  return [
+    ...slack.formTextSections(`Your display name is\n*${name}*`),
+    {
+      type: 'actions',
+      elements: [
+        {
+          type: 'button',
+          text: {
+            type: 'plain_text',
+            text: 'Got it',
+          },
+          value: 'ignore',
+        },
+      ],
+    },
+  ];
+};
+
+export const noDisplayName = () => {
+  return [
+    ...slack.formTextSections('It doesn\'t look like you have a display name set.\nPlease use `/set-name` command to set your name'),
     {
       type: 'actions',
       elements: [
@@ -184,12 +224,16 @@ export const sendCorrectAnswer = (answer) => {
 export const sendEndRound = (correctPlayers) => {
   const sections = [];
   correctPlayers.forEach((p) => {
+    let name = `<@${p.id}>`;
+    if (p.displayName) {
+      name = `*${p.displayName}*`;
+    }
     sections.push({
       type: 'section',
       fields: [
         {
           type: 'mrkdwn',
-          text: `<@${p.id}>`,
+          text: name,
         },
         {
           type: 'mrkdwn',
@@ -200,8 +244,8 @@ export const sendEndRound = (correctPlayers) => {
   });
   const responses = [
     'Now let\'s see who guessed correctly',
-    'Let\'s take a look who got it right!',
-    'Who was smart enough to get this right?',
+    'Let\'s take a look who got it right',
+    'Who was smart enough to get this correct',
   ];
   const randomIdx = randomNumber(responses.length);
   const text = responses[randomIdx];
@@ -240,3 +284,87 @@ export const sendWrongPassword = () => {
     }],
   }];
 };
+
+export const sendSuddenDeath = () => {
+  return slack.formTextSections([
+    ':rotating_light: Uh oh looks like we have a tie for the first place',
+    'We know what that means',
+    'It\'s time for SUDDEN DEATH',
+    '\n',
+    '\n',
+    'Coming Soon :sunglasses:',
+    'Play rock scissors paper for it or something I don\'t know',
+    '\n',
+  ]);
+};
+
+export const endGameMessages = (highScore, winners) => {
+  if (winners[2]) {
+    let endGameMessages = [
+      'Alright well those were rough 10 rounds',
+      'I don\'t even know if anybody deserves :one:st place',
+      'But I guess let me reveal who won today\'s trivia',
+      `\n`,
+    ];
+    if (highScore >= 15) {
+      endGameMessages = [
+        'Wow incredible one of yall was on :fire: today!',
+        'I\'m sure everybody knows who\'s taking the :cronwn: today',
+        'But let me announce today\'s winner!',
+        '\n',
+      ];
+    } else if (highScore >= 10) {
+      endGameMessages = [
+        'Well hope everybody at least got half of those questions correct',
+        'After 10 rounds let\'s see who takes home the :crown:',
+        '\n',
+      ];
+    }
+    const message = [];
+    winners.map((players, idx) => {
+      if (players) {
+        if (idx === 0) {
+          message.push(`:three:rd Place with ${players[0].score} points`);
+        } else if (idx === 1) {
+          message.push(`:two:nd Place with ${players[0].score} points`);
+        } else if (idx === 2) {
+          if (winners[1].players) {
+            message.push('And');
+          }
+          message.push(`:one:st Place with ${players[0].score} points`);
+          message.push(`and one${players.length > 1 ? 's' : ''} to take the :crown:`);
+        }
+        players.forEach((player) => {
+          const {
+            displayName,
+            id,
+          } = player;
+          if (displayName) {
+            message.push(`*${displayName}*`);
+          } else {
+            message.push(`<@${id}>`);
+          }
+        })
+        message.push('\n');
+      }
+    });
+    endGameMessages.push(...message);
+    const byeMessage = [
+      'I guess that\'s all for today\'s trivia',
+      'Hope everybody learned something today',
+      'I\'ll see you next time! :v:',
+      '\n',
+    ];
+    endGameMessages.push(...byeMessage);
+    return slack.formTextSections(endGameMessages);
+  }
+  return slack.formTextSections([
+    'Hmmm I guess nobody played today or couldn\'t get any questions right!',
+    'How disappointing :pensive:',
+    '\n',
+    'I guess that\'s all for today\'s trivia',
+    'Hope everybody learned something today',
+    'I\'ll see you next time! :v:',
+    '\n',
+  ]);
+}

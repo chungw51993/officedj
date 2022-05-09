@@ -8,7 +8,7 @@ class Trivia {
 
   getInitialState() {
     return {
-      leaderBoard: {},
+      players: {},
       currentGameId: null,
       currentPlayers: {},
       currentQuestion: {},
