@@ -16,6 +16,7 @@ class Trivia {
       currentRound: 1,
       correctAnswers: [],
       questionMessage: {},
+      selectedCategory: {},
       error: false,
       state: 'waiting',
     };

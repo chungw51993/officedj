@@ -222,26 +222,6 @@ export const sendCorrectAnswer = (answer) => {
 };
 
 export const sendEndRound = (correctPlayers) => {
-  const sections = [];
-  correctPlayers.forEach((p) => {
-    let name = `<@${p.id}>`;
-    if (p.displayName) {
-      name = `*${p.displayName}*`;
-    }
-    sections.push({
-      type: 'section',
-      fields: [
-        {
-          type: 'mrkdwn',
-          text: name,
-        },
-        {
-          type: 'mrkdwn',
-          text: `${p.score} point${p.score > 1 ? 's' : ''}`,
-        },
-      ],
-    });
-  });
   const responses = [
     'Now let\'s see who guessed correctly',
     'Let\'s take a look who got it right',
@@ -249,14 +229,41 @@ export const sendEndRound = (correctPlayers) => {
   ];
   const randomIdx = randomNumber(responses.length);
   const text = responses[randomIdx];
-  const block = slack.formTextSections(text);
-  return [
-    ...block,
-    ...sections,
-    ...slack.formTextSections([
+  const blocks = slack.formTextSections(text);
+  if (correctPlayers.length > 0) {
+    const sections = [];
+    correctPlayers.forEach((p, idx) => {
+      let name = `<@${p.id}>`;
+      if (p.displayName) {
+        name = `*${p.displayName}*`;
+      }
+      let fields = [{
+        type: 'mrkdwn',
+        text: name,
+      }];
+      if (idx === 0) {
+        fields.push({
+          type: 'mrkdwn',
+          text: ':star2: Select Next Category',
+        });
+      }
+      sections.push({
+        type: 'section',
+        fields,
+      });
+    });
+    sections.push(...slack.formTextSections('\n\n'));
+    blocks.push(...sections);
+  } else {
+    const noCorrectMsg = [
+      'Nobody?! Well that\'s disappointing',
+      'I guess I\'ll select the next category since nobody answered correctly',
       '\n',
-    ]),
-  ];
+    ];
+    blocks.push(...slack.formTextSections(noCorrectMsg));
+  }
+
+  return blocks;
 };
 
 export const sendWrongPassword = () => {
@@ -328,7 +335,7 @@ export const endGameMessages = (highScore, winners) => {
         } else if (idx === 1) {
           message.push(`:two:nd Place with ${players[0].score} points`);
         } else if (idx === 2) {
-          if (winners[1].players) {
+          if (winners[1] && winners[1].players) {
             message.push('And');
           }
           message.push(`:one:st Place with ${players[0].score} points`);
@@ -367,4 +374,71 @@ export const endGameMessages = (highScore, winners) => {
     'I\'ll see you next time! :v:',
     '\n',
   ]);
-}
+};
+
+export const playerSelectCategory = (player) => {
+  const {
+    displayName,
+    id,
+  } = player;
+  let text = `<@${id}>`;
+  if (displayName) {
+    text = `*${displayName}*`;
+  }
+  return slack.formTextSections([
+    `${text} is selecting the next round category`,
+    '\n',
+  ]);
+};
+
+export const categorySelected = (player, label) => {
+  const {
+    id,
+    displayName,
+  } = player;
+  let text = `<@${id}>`;
+  if (displayName) {
+    text = `*${displayName}*`;
+  }
+  return slack.formTextSections([
+    `${text} selected ${label}`,
+    '\n',
+  ]);
+};
+
+export const selectCategories = () => {
+  const selectCats = [];
+  const cCats = categories.slice();
+  cCats.shift();
+  for(var i = cCats.length-1; selectCats.length < 4; i -= 1){
+    const [cat] = cCats.splice(Math.floor(Math.random() * cCats.length), 1);
+    selectCats.push(cat);
+  }
+  const buttons = [];
+  selectCats.forEach((cat) => {
+    const {
+      label,
+      value,
+    } = cat;
+    buttons.push({
+      type: 'actions',
+      elements: [{
+        type: 'button',
+        text: {
+          type: 'plain_text',
+          text: label,
+          emoji: true,
+        },
+        value: JSON.stringify({
+          action: 'categorySelect',
+          label,
+          categoryId: value,
+        }),
+      }],
+    });
+  });
+  return [
+    ...slack.formTextSections('Please select the next round category'),
+    ...buttons,
+  ];
+};
