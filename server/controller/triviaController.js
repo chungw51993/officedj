@@ -53,8 +53,7 @@ class TriviaController {
     this.sendTriviaQuestion = this.sendTriviaQuestion.bind(this);
     this.countDownAnswer = this.countDownAnswer.bind(this);
     this.sendCorrectAnswer = this.sendCorrectAnswer.bind(this);
-
-    cron.schedule('0 55 15 * * *', this.handleStartReminder, {
+    cron.schedule('0 55 16 * * *', this.handleStartReminder, {
       scheduled: true,
       timezone: 'America/Chicago',
     });

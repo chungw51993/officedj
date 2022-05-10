@@ -174,7 +174,9 @@ export const sendTriviaAnswers = (gameId, trivia) => {
     correct_answer,
     incorrect_answers,
   } = trivia;
-  incorrect_answers.push(correct_answer);
+  if (!incorrect_answers.includes(correct_answer)) {
+    incorrect_answers.push(correct_answer);
+  }
   const answers = incorrect_answers.map((ans) => decode(ans));
   for (let i = answers.length - 1; i < 0; i -= 1) {
     const j = randomNumber(i + 1);
