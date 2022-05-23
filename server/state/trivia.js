@@ -20,6 +20,8 @@ class Trivia {
       selectedCategory: {},
       error: false,
       state: 'waiting',
+      startCount: 0,
+      startVoter: [],
     };
   }
 
