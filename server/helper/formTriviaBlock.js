@@ -105,13 +105,34 @@ export const noDisplayName = () => {
   ];
 };
 
-export const startReminder = (min) => {
-  const responses = [
-    `:loudspeaker: Trivia commences in ${min} minutes`,
-  ];
-  const randomIdx = randomNumber(responses.length);
-  return slack.formTextSections(responses[randomIdx]);
+export const startReminder = (min) => slack.formTextSections(`:loudspeaker: Trivia commences in ${min} minutes`);
+
+export const startCounter = (remaining) => {
+  let text = null;
+  if (remaining === 1) {
+    text = 'Just ' + remaining + ' more player needed to start! Please type `/start` to start';
+  } else if (remaining === 2) {
+    text = 'Looks like we want to start a round of trivia. Just need ' + remaining + ' more players to type `/start`';
+  }
+  return slack.formTextSections(text);
 };
+
+export const alreadyStart = () => [
+  ...slack.formTextSections('You already voted to start. Please get others to join in!'),
+  {
+    type: 'actions',
+    elements: [
+      {
+        type: 'button',
+        text: {
+          type: 'plain_text',
+          text: 'Okay fine I\'ll try',
+        },
+        value: 'ignore',
+      },
+    ],
+  },
+];
 
 export const triviaStarted = () => {
   return slack.formTextSections([

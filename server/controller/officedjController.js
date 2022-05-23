@@ -218,8 +218,8 @@ class OfficeDJController {
   }
 
   async handleAddTrack(userId, data) {
-    await spotifyController.addTrackToQueue(data.id);
     djDelta.addTrackToQueue(data);
+    await spotifyController.addTrackToQueue(data.id);
     slack.postMessage(userId, trackAdded(userId, data));
   }
 
