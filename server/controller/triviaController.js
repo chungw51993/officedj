@@ -111,9 +111,7 @@ class TriviaController {
 
   async handleStartReminder(req, res) {
     const state = trivia.get('state');
-    if (((req && req.body.text === 'FuckOff!')
-        || !req)
-        && state === 'waiting') {
+    if (req?.body?.text === 'FuckOff!') {
       const message = await slack.postMessage(null, startReminder(5));
       await trivia.setState({
         reminderMessage: message,
@@ -127,7 +125,7 @@ class TriviaController {
   }
 
   countDownReminder() {
-    let count = 5;
+    let count = 1;
     const reminderMessage = trivia.get('reminderMessage');
     const intervalId = setInterval(() => {
       if (count <= 0) {
@@ -138,7 +136,7 @@ class TriviaController {
       if (count === 0) {
         setTimeout(this.handleStart, 1000);
       }
-    }, 60000);
+    }, 1000);
   }
 
   async handleStart() {
@@ -288,7 +286,7 @@ class TriviaController {
     });
   }
 
-  nextRound() {
+  async nextRound() {
     const players = trivia.get('players');
     const correctAnswers = trivia.get('correctAnswers');
     if (correctAnswers.length > 0) {
@@ -303,6 +301,9 @@ class TriviaController {
       slack.postMessage(correctAnswers[0], playerSelecting);
       delayEphemeralMessage(correctAnswers[0], selectCategories());
     } else {
+      await trivia.setState({
+        selectedCategory: {},
+      });
       this.sendTriviaQuestion();
     }
   }
