@@ -1,8 +1,10 @@
 import axios from 'axios';
 
+import randomNumber from './randomNumber';
+
 class TriviaClient {
   async getTriviaQuestion(category, difficulty) {
-    let url = `https://opentdb.com/api.php?amount=1&type=multiple&difficulty=${difficulty}`;
+    let url = `https://opentdb.com/api.php?amount=50&type=multiple&difficulty=${difficulty}`;
     if (category !== 'all') {
       url += `&category=${category}`;
     }
@@ -10,7 +12,8 @@ class TriviaClient {
       method: 'GET',
       url,
     });
-    return results[0];
+    const randomIdx = randomNumber(results.length);
+    return results[randomIdx];
   }
 }
 

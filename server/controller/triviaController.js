@@ -1,3 +1,4 @@
+import { decode } from 'html-entities';
 import cron from 'node-cron';
 
 import slackClient from '../util/slackClient';
@@ -41,7 +42,7 @@ const {
   TRIVIA_APP_TOKEN,
 } = process.env;
 
-const COUNT_DOWN = 15;
+const COUNT_DOWN = 8;
 const NUM_ROUND = 10;
 
 const slack = new slackClient(TRIVIA_CHANNEL_ID, TRIVIA_APP_TOKEN);
@@ -55,7 +56,7 @@ class TriviaController {
     this.sendTriviaQuestion = this.sendTriviaQuestion.bind(this);
     this.countDownAnswer = this.countDownAnswer.bind(this);
     this.sendCorrectAnswer = this.sendCorrectAnswer.bind(this);
-    cron.schedule('0 55 16 * * *', this.handleStartReminder, {
+    cron.schedule('0 55 16 * * 1-5', this.handleStartReminder, {
       scheduled: true,
       timezone: 'America/Chicago',
     });
@@ -181,6 +182,7 @@ class TriviaController {
       currentPlayers,
       state: 'started',
       startCount: 0,
+      startVoter: [],
     });
     const messages = triviaStarted();
     sendMultipleMessages(messages, 3500, this.sendTriviaQuestion);
@@ -420,7 +422,7 @@ class TriviaController {
     const currentPlayers = trivia.get('currentPlayers');
     const correctAnswers = trivia.get('correctAnswers');
     if (gameId === currentGameId
-      && currentQuestion.correct_answer === correctAnswer) {
+      && decode(currentQuestion.correct_answer) === correctAnswer) {
       const qAndA = {
         question: currentQuestion,
         answer,

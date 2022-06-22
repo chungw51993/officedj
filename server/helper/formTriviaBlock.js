@@ -12,6 +12,7 @@ export const help = () => {
       '*/category*\nShows all the categories.',
       '*/set-name*\nSet display name that will be used for trivia',
       '*/show-name*\nShow current display name',
+      '*/start*\nStarts a round of trivia with 3 people!'
     ]),
     {
       type: 'actions',
@@ -136,6 +137,7 @@ export const alreadyStart = () => [
 
 export const triviaStarted = () => {
   return slack.formTextSections([
+    '<!here> TRIVIA COMMENCING!',
     'Welcome ladies and gentlemen',
     'It\'s time for another TRIVIA!',
     '\n',
@@ -237,7 +239,7 @@ export const sendYouAnswered = answer => slack.formTextSections(`Your answer was
 export const sendCorrectAnswer = (answer) => {
   return slack.formTextSections([
     'Correct answer was :drum_with_drumsticks:',
-    `*${answer}*`,
+    `*${decode(answer)}*`,
     `\n`,
   ]);
 };
@@ -337,7 +339,7 @@ export const endGameMessages = (highScore, winners) => {
     if (highScore >= 15) {
       endGameMessages = [
         'Wow incredible one of yall was on :fire: today!',
-        'I\'m sure everybody knows who\'s taking the :cronwn: today',
+        'I\'m sure everybody knows who\'s taking the :crown: today',
         'But let me announce today\'s winner!',
         '\n',
       ];
