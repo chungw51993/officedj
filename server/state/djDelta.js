@@ -76,6 +76,7 @@ class DJDelta {
 
   async addTrackToQueue(track) {
     const {
+      current,
       queue,
     } = this.state;
     if (!current.id) {
