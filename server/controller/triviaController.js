@@ -206,27 +206,33 @@ class TriviaController {
       const randomCategory = categories[randomIdx];
       cat = randomCategory;
     }
+    try {
+      const question = await triviaClient.getTriviaQuestion(cat.value, difficulty);
 
-    const question = await triviaClient.getTriviaQuestion(cat.value, difficulty);
-    const messages = sendTriviaQuestion(currentRound, cat, question);
-    await sendMultipleMessages(messages, 3000);
+      console.log('Sending question: ', question);
 
-    const message = await delayMessage(sendAnswerCountDown(COUNT_DOWN));
+      const messages = sendTriviaQuestion(currentRound, cat, question);
+      await sendMultipleMessages(messages, 3000);
 
-    trivia.setState({
-      currentQuestion: question,
-      questionMessage: message,
-      correctAnswers: [],
-    });
+      const message = await delayMessage(sendAnswerCountDown(COUNT_DOWN));
 
-    setTimeout(async () => {
-      const postAnswers = [];
-      Object.keys(currentPlayers).forEach((p) => {
-        postAnswers.push(slack.postEphemeral(p, sendTriviaAnswers(currentGameId, question)));
+      trivia.setState({
+        currentQuestion: question,
+        questionMessage: message,
+        correctAnswers: [],
       });
-      await Promise.all(postAnswers);
-      this.countDownAnswer();
-    }, 3000);
+
+      setTimeout(async () => {
+        const postAnswers = [];
+        Object.keys(currentPlayers).forEach((p) => {
+          postAnswers.push(slack.postEphemeral(p, sendTriviaAnswers(currentGameId, question)));
+        });
+        await Promise.all(postAnswers);
+        this.countDownAnswer();
+      }, 3000);
+    } catch (err) {
+      console.error('Error sending trivia question: ', err);
+    }
   }
 
   async handleButton(req, res) {
