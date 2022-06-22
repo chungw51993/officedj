@@ -125,16 +125,16 @@ class TriviaController {
           slack.postEphemeral(userId, alreadyStart());
         } else {
           startCount += 1;
-          if (startCount >= 3) {
+          // if (startCount >= 3) {
             this.handleStart();
-          } else {
-            startVoter.push(userId);
-            await trivia.setState({
-              startCount,
-              startVoter,
-            });
-            slack.postMessage(null, startCounter(3 - startCount));
-          }
+          // } else {
+          //   startVoter.push(userId);
+          //   await trivia.setState({
+          //     startCount,
+          //     startVoter,
+          //   });
+          //   slack.postMessage(null, startCounter(3 - startCount));
+          // }
         }
       } else {
         const message = await slack.postMessage(null, startReminder(5));
