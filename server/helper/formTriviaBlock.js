@@ -137,7 +137,8 @@ export const alreadyStart = () => [
 
 export const triviaStarted = () => {
   return slack.formTextSections([
-    '<!here> Welcome ladies and gentlemen',
+    '<!here> TRIVIA COMMENCING!',
+    'Welcome ladies and gentlemen',
     'It\'s time for another TRIVIA!',
     '\n',
     'Now before we start I\'ll explain how this works for all the newcomers',
