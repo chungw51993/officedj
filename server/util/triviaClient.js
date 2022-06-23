@@ -3,17 +3,32 @@ import axios from 'axios';
 import randomNumber from './randomNumber';
 
 class TriviaClient {
-  async getTriviaQuestion(category, difficulty) {
-    let url = `https://opentdb.com/api.php?amount=50&type=multiple&difficulty=${difficulty}`;
-    if (category !== 'all') {
-      url += `&category=${category}`;
-    }
-    const { data: { results } } = await axios({
-      method: 'GET',
-      url,
+  getTriviaQuestion(category, difficulty) {
+    console.log('Getting question for category: ', difficulty, category);
+    return new Promise((resolve, reject) => {
+      let url = `https://opentdb.com/api.php?amount=5&type=multiple&difficulty=${difficulty}`;
+      if (category !== 'all') {
+        url += `&category=${category}`;
+      }
+      let question = null;
+      const grabQuestion = () => {
+        axios({
+          method: 'GET',
+          url,
+        }).then(({ data: { results } }) => {
+          console.log('Number of question grabbed: ', results.length);
+          if (results.length > 0) {
+            const randomIdx = randomNumber(results.length);
+            console.log('Selected: ', randomIdx, ' question');
+            question = results[randomIdx];
+            resolve(results[randomIdx]);
+          } else {
+            grabQuestion();
+          }
+        }).catch(grabQuestion);
+      }
+      grabQuestion();
     });
-    const randomIdx = randomNumber(results.length);
-    return results[randomIdx];
   }
 }
 
