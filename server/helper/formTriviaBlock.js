@@ -244,7 +244,7 @@ export const sendCorrectAnswer = (answer) => {
   ]);
 };
 
-export const sendEndRound = (correctPlayers) => {
+export const sendEndRound = (correctPlayers, isLastRound) => {
   const responses = [
     'Now let\'s see who guessed correctly',
     'Let\'s take a look who got it right',
@@ -264,7 +264,7 @@ export const sendEndRound = (correctPlayers) => {
         type: 'mrkdwn',
         text: name,
       }];
-      if (idx === 0) {
+      if (idx === 0 && !isLastRound) {
         fields.push({
           type: 'mrkdwn',
           text: ':star2: Select Next Category',
@@ -278,11 +278,16 @@ export const sendEndRound = (correctPlayers) => {
     sections.push(...slack.formTextSections('\n\n'));
     blocks.push(...sections);
   } else {
-    const noCorrectMsg = [
+    let noCorrectMsg = [
       'Nobody?! Well that\'s disappointing',
-      'I guess I\'ll select the next category since nobody answered correctly',
-      '\n',
     ];
+    if (isLastRound) {
+      noCorrectMsg = [
+        ...noCorrectMsg,
+        'I guess I\'ll select the next category since nobody answered correctly',
+        '\n',
+      ];
+    }
     blocks.push(...slack.formTextSections(noCorrectMsg));
   }
 
