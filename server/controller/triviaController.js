@@ -118,6 +118,7 @@ class TriviaController {
     let startCount = trivia.get('startCount');
     if (state === 'waiting') {
       if (req?.body?.command === '/start') {
+        this.handleStart();
         const {
           user_id: userId,
         } = req.body;
@@ -428,6 +429,7 @@ class TriviaController {
     const currentRound = trivia.get('currentRound');
     const currentPlayers = trivia.get('currentPlayers');
     const correctAnswers = trivia.get('correctAnswers');
+    console.log('handling answer', currentQuestion.correct_answer, correctAnswer, currentQuestion.correct_answer === correctAnswer);
     if (gameId === currentGameId
       && decode(currentQuestion.correct_answer) === correctAnswer) {
       const qAndA = {

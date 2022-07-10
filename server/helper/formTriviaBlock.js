@@ -3,6 +3,7 @@ import { decode } from 'html-entities';
 import categories from './triviaCategory';
 import slackClient from '../util/slackClient';
 import randomNumber from '../util/randomNumber';
+import shuffle from '../util/shuffle';
 
 const slack = new slackClient();
 
@@ -200,13 +201,7 @@ export const sendTriviaAnswers = (gameId, trivia) => {
   if (!incorrect_answers.includes(correct_answer)) {
     incorrect_answers.push(correct_answer);
   }
-  const answers = incorrect_answers.map((ans) => decode(ans));
-  for (let i = answers.length - 1; i < 0; i -= 1) {
-    const j = randomNumber(i + 1);
-    const temp = answers[i];
-    answers[i] = answers[j];
-    answers[j] = temp;
-  }
+  const answers = shuffle(incorrect_answers.map((ans) => decode(ans)));
   const q = decode(question);
   const correctAnswer = decode(correct_answer);
   const buttons = [];
