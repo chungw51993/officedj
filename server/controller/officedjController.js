@@ -1,4 +1,4 @@
-import slack from '../util/slackClient';
+import slackClient from '../util/slackClient';
 import djDelta from '../state/djDelta';
 import {
   help,
@@ -19,15 +19,22 @@ import {
   currentHost,
   confirmReset,
   deltaReset,
-} from '../helper/formSlackBlock';
+} from '../helper/formOfficeDJBlock';
 
 import spotifyController from './spotifyController';
 
 import Logger from '../util/logger';
 
-class SlackController {
+const {
+  OFFICEDJ_CHANNEL_ID,
+  OFFICEDJ_APP_TOKEN,
+} = process.env;
+
+const slack = new slackClient(OFFICEDJ_CHANNEL_ID, OFFICEDJ_APP_TOKEN)
+
+class OfficeDJController {
   constructor() {
-    this.logger = Logger.getLogger('SlackController');
+    this.logger = Logger.getLogger('OfficeDJController');
     this.handleLookup = this.handleLookup.bind(this);
     this.handleGong = this.handleGong.bind(this);
     this.handleButton = this.handleButton.bind(this);
@@ -177,49 +184,42 @@ class SlackController {
     res.status(200).send();
   }
 
-  async handleButton(req, res) {
-    try {
-      const {
-        payload,
-      } = req.body;
-      const {
-        response_url: responseUrl,
-        actions,
-        user: {
-          id: userId,
-        },
-      } = JSON.parse(payload);
+  handleButton(req, res) {
+    const {
+      payload,
+    } = req.body;
+    const {
+      response_url: responseUrl,
+      actions,
+      user: {
+        id: userId,
+      },
+    } = JSON.parse(payload);
 
-      slack.deleteOriginalMessage(responseUrl);
+    slack.deleteOriginalMessage(responseUrl);
 
-      const [action] = actions;
+    const [action] = actions;
+    const {
+      value,
+    } = action;
+    if (value !== 'ignore') {
       const {
-        value,
-      } = action;
-      if (value !== 'ignore') {
-        const {
-          action,
-          ...data
-        } = JSON.parse(value);
-        if (action === 'addTrack') {
-          this.handleAddTrack(userId, data);
-        } else if (action === 'resetState') {
-          this.handleResetState(userId);
-        }
+        action,
+        ...data
+      } = JSON.parse(value);
+      if (action === 'addTrack') {
+        this.handleAddTrack(userId, data);
+      } else if (action === 'resetState') {
+        this.handleResetState(userId);
       }
-
-      res.status(200).send();
-    } catch (err) {
-      this.logger.error(err);
-      res.status(500).json({
-        err,
-      });
     }
+
+    res.status(200).send();
   }
 
   async handleAddTrack(userId, data) {
-    await spotifyController.addTrackToQueue(data.id);
     djDelta.addTrackToQueue(data);
+    await spotifyController.addTrackToQueue(data.id);
     slack.postMessage(userId, trackAdded(userId, data));
   }
 
@@ -230,5 +230,4 @@ class SlackController {
   }
 }
 
-
-export default new SlackController();
+export default new OfficeDJController();
