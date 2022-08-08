@@ -1,5 +1,3 @@
-import { decode } from 'html-entities';
-
 import categories from './triviaCategory';
 import slackClient from '../util/slackClient';
 import randomNumber from '../util/randomNumber';
@@ -172,12 +170,11 @@ export const sendTriviaQuestion = (round, category, trivia) => {
     difficulty,
     question,
   } = trivia;
-  const q = decode(question);
   return slack.formTextSections([
     `*ROUND ${round}*`,
     `Category: *${category.label}*`,
     `Difficulty: *${difficulty.toUpperCase()}*`,
-    `*${q}*`,
+    `*${question}*`,
     '\n',
   ]);
 };
@@ -195,15 +192,13 @@ export const sendTriviaAnswers = (gameId, trivia) => {
     category,
     difficulty,
     question,
-    correct_answer,
-    incorrect_answers,
+    correctAnswer,
+    incorrectAnswers,
   } = trivia;
-  if (!incorrect_answers.includes(correct_answer)) {
-    incorrect_answers.push(correct_answer);
+  if (!incorrectAnswers.includes(correctAnswer)) {
+    incorrectAnswers.push(correctAnswer);
   }
-  const answers = shuffle(incorrect_answers.map((ans) => decode(ans)));
-  const q = decode(question);
-  const correctAnswer = decode(correct_answer);
+  const answers = shuffle(incorrectAnswers);
   const buttons = [];
   answers.forEach((answer) => {
     buttons.push({
@@ -219,7 +214,7 @@ export const sendTriviaAnswers = (gameId, trivia) => {
           gameId,
           answer,
           correctAnswer,
-          question: q,
+          question,
           category,
           difficulty,
         }),
@@ -234,12 +229,12 @@ export const sendYouAnswered = answer => slack.formTextSections(`Your answer was
 export const sendCorrectAnswer = (answer) => {
   return slack.formTextSections([
     'Correct answer was :drum_with_drumsticks:',
-    `*${decode(answer)}*`,
+    `*${answer}*`,
     `\n`,
   ]);
 };
 
-export const sendEndRound = (correctPlayers, isLastRound) => {
+export const sendEndRound = (correctPlayers, wrongPlayers, isLastRound) => {
   const responses = [
     'Now let\'s see who guessed correctly',
     'Let\'s take a look who got it right',
@@ -273,16 +268,42 @@ export const sendEndRound = (correctPlayers, isLastRound) => {
     sections.push(...slack.formTextSections('\n\n'));
     blocks.push(...sections);
   } else {
-    let noCorrectMsg = [
+    const noCorrectMsg = [
       'Nobody?! Well that\'s disappointing',
     ];
-    if (isLastRound) {
-      noCorrectMsg = [
-        ...noCorrectMsg,
-        'I guess I\'ll select the next category since nobody answered correctly',
-        '\n',
-      ];
-    }
+    blocks.push(...slack.formTextSections(noCorrectMsg));
+  }
+  if (wrongPlayers.length > 0) {
+    const wrongResponses = [
+      'Now let\'s see who guessed incorrectly :eyes:',
+      'Let\'s take a look at who didn\'t know :face_palm:',
+    ];
+    const wRandomIdx = randomNumber(wrongResponses.length);
+    const wText = wrongResponses[wRandomIdx];
+    blocks.push(...slack.formTextSections(wText));
+    const sections = [];
+    wrongPlayers.forEach((p, idx) => {
+      let text = `<@${p.id}> answered *${p.answer}*`;
+      if (p.displayName) {
+        text = `*${p.displayName}* answered *${p.answer}*`;
+      }
+      const fields = [{
+        type: 'mrkdwn',
+        text,
+      }];
+      sections.push({
+        type: 'section',
+        fields,
+      });
+    });
+    sections.push(...slack.formTextSections('\n\n'));
+    blocks.push(...sections);
+  }
+  if (isLastRound) {
+    const noCorrectMsg = [
+      'I guess I\'ll select the next category since nobody answered correctly',
+      '\n',
+    ];
     blocks.push(...slack.formTextSections(noCorrectMsg));
   }
 
