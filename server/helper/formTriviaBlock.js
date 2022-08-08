@@ -299,11 +299,7 @@ export const sendEndRound = (correctPlayers, wrongPlayers, isLastRound) => {
     sections.push(...slack.formTextSections('\n\n'));
     blocks.push(...sections);
   }
-<<<<<<< HEAD
   if (correctPlayers.length === 0 && !isLastRound) {
-=======
-  if (isLastRound) {
->>>>>>> 73703b78ca70e141caff8a518cecdafe2631c397
     const noCorrectMsg = [
       'I guess I\'ll select the next category since nobody answered correctly',
       '\n',
