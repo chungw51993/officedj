@@ -1,4 +1,3 @@
-import { decode } from 'html-entities';
 import cron from 'node-cron';
 
 import slackClient from '../util/slackClient';
@@ -112,42 +111,17 @@ class TriviaController {
     res.status(200).send();
   }
 
-  async handleStartReminder(req, res) {
+  async handleStartReminder() {
     const state = trivia.get('state');
     const startVoter = trivia.get('startVoter');
     let startCount = trivia.get('startCount');
     if (state === 'waiting') {
-      if (req?.body?.command === '/start') {
-        this.handleStart();
-        const {
-          user_id: userId,
-        } = req.body;
-        if (startVoter.includes(userId)) {
-          slack.postEphemeral(userId, alreadyStart());
-        } else {
-          startCount += 1;
-          if (startCount >= 3) {
-            this.handleStart();
-          } else {
-            startVoter.push(userId);
-            await trivia.setState({
-              startCount,
-              startVoter,
-            });
-            slack.postMessage(null, startCounter(3 - startCount));
-          }
-        }
-      } else {
-        const message = await slack.postMessage(null, startReminder(5));
-        await trivia.setState({
-          reminderMessage: message,
-          state: 'scheduled',
-        });
-        this.countDownReminder();
-      }
-    }
-    if (res) {
-      res.status(200).send();
+      const message = await slack.postMessage(null, startReminder(5));
+      await trivia.setState({
+        reminderMessage: message,
+        state: 'scheduled',
+      });
+      this.countDownReminder();
     }
   }
 
@@ -222,6 +196,7 @@ class TriviaController {
         currentQuestion: question,
         questionMessage: message,
         correctAnswers: [],
+        wrongAnswers: [],
       });
 
       setTimeout(async () => {
@@ -290,18 +265,17 @@ class TriviaController {
     const currentRound = trivia.get('currentRound');
     const currentPlayers = trivia.get('currentPlayers');
     const correctAnswers = trivia.get('correctAnswers');
+    const wrongAnswers = trivia.get('wrongAnswers');
     const players = trivia.get('players');
-    const messages = sendCorrectAnswer(currentQuestion.correct_answer);
+    const messages = sendCorrectAnswer(currentQuestion.correctAnswer);
     await trivia.setState({
       currentRound: currentRound + 1,
       currentQuestion: {},
     });
     await sendMultipleMessages(messages, 4000);
     const correctPlayers = [];
+    const wrongPlayers = [];
     correctAnswers.forEach((k) => {
-      const {
-        answers,
-      } = currentPlayers[k];
       let displayName = null;
       if (players[k] && players[k].displayName) {
         displayName = players[k].displayName;
@@ -312,7 +286,19 @@ class TriviaController {
         displayName,
       });
     });
-    const endMessages = sendEndRound(correctPlayers, currentRound === NUM_ROUND);
+    wrongAnswers.forEach(({ id, answer }) => {
+      let displayName = null;
+      if (players[id] && players[id].displayName) {
+        displayName = players[id].displayName;
+      }
+      wrongPlayers.push({
+        ...currentPlayers[id],
+        id,
+        displayName,
+        answer,
+      });
+    });
+    const endMessages = sendEndRound(correctPlayers, wrongAnswers, currentRound === NUM_ROUND);
     await sendMultipleMessages(endMessages, 2000, () => {
       if (currentRound < NUM_ROUND) {
         this.nextRound();
@@ -429,9 +415,10 @@ class TriviaController {
     const currentRound = trivia.get('currentRound');
     const currentPlayers = trivia.get('currentPlayers');
     const correctAnswers = trivia.get('correctAnswers');
-    console.log('handling answer', currentQuestion.correct_answer, correctAnswer, currentQuestion.correct_answer === correctAnswer);
+    const wrongAnswers = trivia.get('wrongAnswers');
+    console.log('handling answer', currentQuestion.correctAnswer, correctAnswer, currentQuestion.correctAnswer === correctAnswer);
     if (gameId === currentGameId
-      && decode(currentQuestion.correct_answer) === correctAnswer) {
+      && currentQuestion.correctAnswer === correctAnswer) {
       const qAndA = {
         question: currentQuestion,
         answer,
@@ -446,11 +433,17 @@ class TriviaController {
         }
         currentPlayers[userId].score += point;
         correctAnswers.push(userId);
+      } else {
+        wrongAnswers.push({
+          id: userId,
+          answer,
+        });
       }
       slack.postEphemeral(userId, sendYouAnswered(answer));
       trivia.setState({
         currentPlayers,
         correctAnswers,
+        wrongAnswers,
       });
     }
   }
