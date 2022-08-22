@@ -140,7 +140,7 @@ class TriviaController {
     }, 60000);
   }
 
-  async handleStart() {
+  async handleStart(req, res) {
     console.log('Starting trivia');
     const { members } = await slack.getAllChannelMembers();
     const currentPlayers = {};
@@ -162,6 +162,9 @@ class TriviaController {
     });
     const messages = triviaStarted();
     sendMultipleMessages(messages, 3500, this.sendTriviaQuestion);
+    if (res) {
+      res.status(200).send();
+    }
   }
 
   async sendTriviaQuestion() {
