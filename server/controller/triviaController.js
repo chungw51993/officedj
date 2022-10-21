@@ -55,7 +55,7 @@ class TriviaController {
     this.sendTriviaQuestion = this.sendTriviaQuestion.bind(this);
     this.countDownAnswer = this.countDownAnswer.bind(this);
     this.sendCorrectAnswer = this.sendCorrectAnswer.bind(this);
-    cron.schedule('0 55 16 * * 1-5', this.handleStartReminder, {
+    cron.schedule('0 55 13 * * 1-5', this.handleStartReminder, {
       scheduled: true,
       timezone: 'America/Chicago',
     });
@@ -113,8 +113,6 @@ class TriviaController {
 
   async handleStartReminder() {
     const state = trivia.get('state');
-    const startVoter = trivia.get('startVoter');
-    let startCount = trivia.get('startCount');
     if (state === 'waiting') {
       const message = await slack.postMessage(null, startReminder(5));
       await trivia.setState({
@@ -141,9 +139,16 @@ class TriviaController {
   }
 
   async handleStart(req, res) {
+    if (req?.body) {
+      const {
+        text,
+      } = req.body;
+      if (text !== 'All1edTr1v1a') {
+        return res.status(200).send();
+      }
+    }
     console.log('Starting trivia');
     const { members } = await slack.getAllChannelMembers();
-    console.log(members);
     const currentPlayers = {};
     members.forEach((id) => {
       if (id !== TRIVIA_USER_ID) {
@@ -152,7 +157,7 @@ class TriviaController {
           score: 0,
         };
       }
-    })
+    });
     await trivia.setState({
       currentRound: 1,
       currentGameId: uuidv4(),

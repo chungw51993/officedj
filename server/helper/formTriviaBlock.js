@@ -220,12 +220,12 @@ export const sendTriviaAnswers = (gameId, trivia) => {
   return buttons;
 };
 
-export const sendYouAnswered = answer => slack.formTextSections(`Your answer was *${answer}*`);
+export const sendYouAnswered = answer => slack.formTextSections(`Your answer was *${answer.trim()}*`);
 
 export const sendCorrectAnswer = (answer) => {
   return slack.formTextSections([
     'Correct answer was :drum_with_drumsticks:',
-    `*${answer}*`,
+    `*${answer.trim()}*`,
     `\n`,
   ]);
 };
@@ -279,9 +279,9 @@ export const sendEndRound = (correctPlayers, wrongPlayers, isLastRound) => {
     blocks.push(...slack.formTextSections(wText));
     const sections = [];
     wrongPlayers.forEach((p, idx) => {
-      let text = `<@${p.id}> answered *${p.answer}*`;
+      let text = `<@${p.id}> answered *${p.answer.trim()}*`;
       if (p.displayName) {
-        text = `*${p.displayName}* answered *${p.answer}*`;
+        text = `*${p.displayName}* answered *${p.answer.trim()}*`;
       }
       const fields = [{
         type: 'mrkdwn',
