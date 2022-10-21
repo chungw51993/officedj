@@ -27,7 +27,7 @@ class SlackClient {
     try {
       return await this.slackClient.chat.postEphemeral(message);
     } catch (err) {
-      console.error('Error posting ephemeral', err, message);
+      console.error('Error posting ephemeral', err, JSON.stringify(message));
     }
   }
 
@@ -40,7 +40,7 @@ class SlackClient {
     try {
       return await this.slackClient.chat.postMessage(message);
     } catch (err) {
-      console.error('Error posting message', err, message);
+      console.error('Error posting message', err, JSON.stringify(message));
     }
   }
 

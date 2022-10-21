@@ -61,7 +61,7 @@ class TriviaController {
     });
   }
 
-  handleHelp(req, res) {
+  handleHelp = (req, res) => {
     const {
       user_id: userId,
     } = req.body;
@@ -69,7 +69,7 @@ class TriviaController {
     res.status(200).send();
   }
 
-  handleShowCategories(req, res) {
+  handleShowCategories = (req, res) => {
     const {
       user_id: userId,
     } = req.body;
@@ -77,7 +77,7 @@ class TriviaController {
     res.status(200).send();
   }
 
-  async handleSetDisplayName(req, res) {
+  handleSetDisplayName = async (req, res) => {
     const {
       user_id: userId,
       text,
@@ -98,7 +98,7 @@ class TriviaController {
     res.status(200).send();
   }
 
-  handleShowDisplayName(req, res) {
+  handleShowDisplayName = (req, res) => {
     const {
       user_id: userId,
     } = req.body;
@@ -113,8 +113,6 @@ class TriviaController {
 
   async handleStartReminder() {
     const state = trivia.get('state');
-    const startVoter = trivia.get('startVoter');
-    let startCount = trivia.get('startCount');
     if (state === 'waiting') {
       const message = await slack.postMessage(null, startReminder(5));
       await trivia.setState({
@@ -133,7 +131,7 @@ class TriviaController {
         clearInterval(intervalId);
       }
       slack.updateMessage(reminderMessage.message.ts, startReminder(count));
-      count--;
+      count -= 1;
       if (count === 0) {
         setTimeout(this.handleStart, 1000);
       }
@@ -143,6 +141,7 @@ class TriviaController {
   async handleStart(req, res) {
     console.log('Starting trivia');
     const { members } = await slack.getAllChannelMembers();
+    console.log(members);
     const currentPlayers = {};
     members.forEach((id) => {
       if (id !== TRIVIA_USER_ID) {
@@ -151,7 +150,7 @@ class TriviaController {
           score: 0,
         };
       }
-    })
+    });
     await trivia.setState({
       currentRound: 1,
       currentGameId: uuidv4(),
@@ -235,12 +234,12 @@ class TriviaController {
     } = action;
     if (value !== 'ignore') {
       const {
-        action,
+        action: act,
         ...data
       } = JSON.parse(value);
-      if (action === 'triviaAnswer') {
+      if (act === 'triviaAnswer') {
         this.handleTriviaAnswer(userId, data);
-      } else if (action === 'categorySelect') {
+      } else if (act === 'categorySelect') {
         this.handleCategory(userId, data);
       }
     }
@@ -256,7 +255,7 @@ class TriviaController {
         clearInterval(intervalId);
       }
       slack.updateMessage(questionMessage.message.ts, sendAnswerCountDown(count));
-      count--;
+      count -= 1;
       if (count === 0) {
         setTimeout(this.sendCorrectAnswer, 1000);
       }
@@ -333,7 +332,7 @@ class TriviaController {
     }
   }
 
-  async endGame() {
+  endGame = async () => {
     const currentPlayers = trivia.get('currentPlayers');
     const players = trivia.get('players');
     let highScore = 0;
@@ -405,13 +404,11 @@ class TriviaController {
     });
   }
 
-  handleTriviaAnswer(userId, data) {
+  handleTriviaAnswer = (userId, data) => {
     const {
       gameId,
       answer,
       correctAnswer,
-      difficulty,
-      question,
     } = data;
     const currentGameId = trivia.get('currentGameId');
     const currentQuestion = trivia.get('currentQuestion');
