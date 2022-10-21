@@ -157,10 +157,6 @@ export const triviaStarted = () => {
     'refrain yourself from chatting while rounds are going',
     'so everybody can read the question',
     '\n',
-    'Please follow the rule or my creator',
-    ':candy-rapper-2:',
-    'will ban you :wink:',
-    '\n',
     'Well good luck to everybody and here we go!',
   ]);
 };
