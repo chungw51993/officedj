@@ -3,7 +3,7 @@ import redis from '../util/redisClient';
 class DJDelta {
   constructor() {
     this.state = this.getInitialState();
-    this.initialize();
+    this._ready = this.initialize();
   }
 
   getInitialState() {
@@ -21,20 +21,34 @@ class DJDelta {
   async initialize() {
     const state = await redis.getObject('djDeltaState');
     if (state) {
-      this.state = state;
+      this.state = { ...this.getInitialState(), ...state };
     } else {
-      redis.setObject('djDeltaState', this.state);
+      await redis.setObject('djDeltaState', this.state);
     }
   }
 
+  async ready() {
+    return this._ready;
+  }
+
   get(field) {
-    if (this.state[field]) {
+    if (this.state[field] !== undefined && this.state[field] !== null) {
       return this.state[field];
+    }
+    const defaults = this.getInitialState();
+    if (defaults[field] !== undefined) {
+      return defaults[field];
     }
     return null;
   }
 
+  async set(field, value) {
+    this.state[field] = value;
+    await redis.setObject('djDeltaState', this.state);
+  }
+
   async setState(state) {
+    await this._ready;
     Object.keys(state).forEach((key) => {
       if (this.state[key] !== undefined) {
         this.state[key] = state[key];

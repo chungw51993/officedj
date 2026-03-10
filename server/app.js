@@ -10,6 +10,7 @@ import officedjRouter from './router/officedjRouter';
 import triviaRouter from './router/triviaRouter';
 import dashboardRouter from './router/dashboardRouter';
 import trivia from './state/trivia';
+import djDelta from './state/djDelta';
 
 const app = express();
 const server = http.createServer(app);
@@ -22,7 +23,11 @@ app.get('/health', (req, res) => {
   res.sendStatus(200);
 });
 
-// Wait for trivia state to hydrate from Redis before handling requests
+// Wait for state to hydrate from Redis before handling requests
+app.use('/officedj', async (req, res, next) => {
+  await djDelta.ready();
+  next();
+});
 app.use('/trivia', async (req, res, next) => {
   await trivia.ready();
   next();
