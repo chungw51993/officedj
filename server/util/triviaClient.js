@@ -6,26 +6,26 @@ class TriviaClient {
   getTriviaQuestion(category, difficulty) {
     console.log('Getting question for category: ', difficulty, category);
     return new Promise((resolve, reject) => {
-      let url = `https://opentdb.com/api.php?amount=5&type=multiple&difficulty=${difficulty}`;
+      let url = `https://the-trivia-api.com/api/questions?limit=5&difficulty=${difficulty}`;
       if (category !== 'all') {
-        url += `&category=${category}`;
+        url += `&categories=${category}`;
       }
       let question = null;
       const grabQuestion = () => {
         axios({
           method: 'GET',
           url,
-        }).then(({ data: { results } }) => {
-          console.log('Number of question grabbed: ', results.length);
-          if (results.length > 0) {
-            const randomIdx = randomNumber(results.length);
+        }).then(({ data }) => {
+          console.log('Number of question grabbed: ', data.length);
+          if (data.length > 0) {
+            const randomIdx = randomNumber(data.length);
             console.log('Selected: ', randomIdx, ' question');
-            question = results[randomIdx];
-            resolve(results[randomIdx]);
+            question = data[randomIdx];
+            resolve(data[randomIdx]);
           } else {
             grabQuestion();
           }
-        }).catch(grabQuestion);
+        }).catch();
       }
       grabQuestion();
     });

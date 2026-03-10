@@ -11,7 +11,11 @@ class SlackClient {
     const options = {
       channel: this.slackChannel,
     };
-    return await this.slackClient.conversations.members(options);
+    try {
+      return await this.slackClient.conversations.members(options);
+    } catch (err) {
+      console.error('Error getting channel members', err);
+    }
   }
 
   async postEphemeral(userId, blocks) {
@@ -20,7 +24,11 @@ class SlackClient {
       user: userId,
       blocks,
     };
-    return await this.slackClient.chat.postEphemeral(message);
+    try {
+      return await this.slackClient.chat.postEphemeral(message);
+    } catch (err) {
+      console.error('Error posting ephemeral', err, message);
+    }
   }
 
   async postMessage(userId, blocks) {
@@ -29,7 +37,11 @@ class SlackClient {
       user: userId,
       blocks,
     };
-    return await this.slackClient.chat.postMessage(message);
+    try {
+      return await this.slackClient.chat.postMessage(message);
+    } catch (err) {
+      console.error('Error posting message', err, message);
+    }
   }
 
   async updateMessage(timestamp, blocks) {
@@ -38,7 +50,11 @@ class SlackClient {
       ts: timestamp,
       blocks,
     };
-    return await this.slackClient.chat.update(message);
+    try {
+      return await this.slackClient.chat.update(message);
+    } catch (err) {
+      console.error('Error updating message', err, message);
+    }
   }
 
   deleteOriginalMessage(responseUrl) {

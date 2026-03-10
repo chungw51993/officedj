@@ -3,7 +3,7 @@ import redis from '../util/redisClient';
 class Trivia {
   constructor() {
     this.state = this.getInitialState();
-    this.initialize();
+    this._ready = this.initialize();
   }
 
   getInitialState() {
@@ -15,6 +15,7 @@ class Trivia {
       currentAnswers: {},
       currentRound: 1,
       correctAnswers: [],
+      wrongAnswers: [],
       reminderMessage: {},
       questionMessage: {},
       selectedCategory: {},
@@ -22,30 +23,45 @@ class Trivia {
       state: 'waiting',
       startCount: 0,
       startVoter: [],
+      // Sudden death fields
+      suddenDeathPlayers: {},
+      suddenDeathRound: 0,
+      // Game history
+      gameHistory: [],
     };
   }
 
   async initialize() {
     const state = await redis.getObject('triviaState');
     if (state) {
-      this.state = state;
+      // Merge with initial state so new fields get defaults
+      this.state = { ...this.getInitialState(), ...state };
     } else {
-      redis.setObject('triviaState', this.state);
+      await redis.setObject('triviaState', this.state);
     }
   }
 
+  async ready() {
+    return this._ready;
+  }
+
   get(field) {
-    if (this.state[field]) {
+    if (this.state[field] !== undefined && this.state[field] !== null) {
       return this.state[field];
+    }
+    // Return defaults for known fields
+    const defaults = this.getInitialState();
+    if (defaults[field] !== undefined) {
+      return defaults[field];
     }
     return null;
   }
 
   async setState(state) {
+    await this._ready;
     Object.keys(state).forEach((key) => {
-      if (this.state[key] !== undefined) {
-        this.state[key] = state[key];
-      }
+      // Allow setting new keys that exist in initial state
+      this.state[key] = state[key];
     });
     await redis.setObject('triviaState', this.state);
     return true;
