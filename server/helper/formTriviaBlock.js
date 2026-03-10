@@ -11,7 +11,10 @@ export const help = () => {
       '*/category*\nShows all the categories.',
       '*/set-name*\nSet display name that will be used for trivia',
       '*/show-name*\nShow current display name',
-      '*/start*\nStarts a round of trivia with 3 people!'
+      '*/start*\nStarts a round of trivia with 3 people!',
+      '*/leaderboard*\nShow top 10 players by lifetime score',
+      '*/stats*\nShow your category breakdown stats',
+      '*/stats @user*\nShow another player\'s category stats',
     ]),
     {
       type: 'actions',
@@ -134,35 +137,22 @@ export const alreadyStart = () => [
   },
 ];
 
-export const triviaStarted = () => {
-  return slack.formTextSections([
-    '<!here> TRIVIA COMMENCING!',
-    'Welcome ladies and gentlemen',
-    'It\'s time for another TRIVIA!',
-    '\n',
-    'Now before we start I\'ll explain how this works for all the newcomers',
-    'There will be 10 rounds of multiple choice trivia question',
-    'First 3 rounds will be easy questions for :one: point',
-    'Honestly everybody should get these :eyes:',
-    'Next 3 rounds will be medium for :two: points',
-    'and last 4 rounds will consist of hard questions',
-    'which will be for :three: points',
-    'Player who answers correctly first will be rewarded',
-    'by picking the next category',
-    '\n',
-    'After 10 rounds I\'ll see who has the most points and determine who deserves the :crown:',
-    'and in case of a tie we\'ll head into sudden death :skull_and_crossbones:',
-    '\n',
-    'I know trivia can be exhilarating but *PLEASE*',
-    'refrain yourself from chatting while rounds are going',
-    'so everybody can read the question',
-    '\n',
-    'Please follow the rule or my creator',
-    ':candy-rapper-2:',
-    'will ban you :wink:',
-    '\n',
-    'Well good luck to everybody and here we go!',
-  ]);
+export const triviaStarted = (lastWinner) => {
+  const messages = [
+    '<!here> :rotating_light: *TRIVIA COMMENCING!* :rotating_light:',
+  ];
+
+  if (lastWinner) {
+    messages.push(`Last winner: :crown: *${lastWinner}* — can they defend the title?`);
+  }
+
+  messages.push(
+    '10 rounds | :one: Easy (1pt) → :two: Medium (2pt) → :three: Hard (3pt)',
+    'First correct answer picks the next category. Ties go to :skull_and_crossbones: *Sudden Death*',
+    'Good luck everybody — here we go!',
+  );
+
+  return slack.formTextSections(messages);
 };
 
 export const sendTriviaQuestion = (round, category, trivia) => {
@@ -336,18 +326,80 @@ export const sendWrongPassword = () => {
   }];
 };
 
-export const sendSuddenDeath = () => {
+// ─── Sudden Death Messages ────────────────────────────────────
+
+export const sendSuddenDeathIntro = (tiedPlayers) => {
+  const playerNames = tiedPlayers.map(p =>
+    p.displayName ? `*${p.displayName}*` : `<@${p.id}>`
+  ).join(', ');
+
   return slack.formTextSections([
-    ':rotating_light: Uh oh looks like we have a tie for the first place',
-    'We know what that means',
-    'It\'s time for SUDDEN DEATH',
+    ':rotating_light: :rotating_light: :rotating_light:',
+    'Uh oh looks like we have a TIE for first place!',
+    `${playerNames} are all tied up!`,
     '\n',
+    'You know what that means...',
+    ':skull_and_crossbones: *SUDDEN DEATH* :skull_and_crossbones:',
     '\n',
-    'Coming Soon :sunglasses:',
-    'Play rock scissors paper for it or something I don\'t know',
+    'Here are the rules:',
+    ':one: All questions are *HARD* difficulty',
+    ':two: Answer *wrong* and you\'re *ELIMINATED* :coffin:',
+    ':three: Last one standing takes the :crown:',
+    '\n',
+    'Let\'s go!',
+  ]);
+};
+
+export const sendSuddenDeathQuestion = (round, category, trivia) => {
+  const { difficulty, question } = trivia;
+  return slack.formTextSections([
+    `:skull_and_crossbones: *SUDDEN DEATH — ROUND ${round}* :skull_and_crossbones:`,
+    `Category: *${category.label}*`,
+    `Difficulty: *${difficulty.toUpperCase()}*`,
+    `*${question}*`,
     '\n',
   ]);
 };
+
+export const sendSuddenDeathElimination = (player) => {
+  const name = player.displayName ? `*${player.displayName}*` : `<@${player.id}>`;
+  const responses = [
+    `${name} got it wrong! :coffin: *ELIMINATED!*`,
+    `${name} is out! :wave: Better luck next time!`,
+    `Wrong answer! ${name} has been eliminated :skull:`,
+  ];
+  const idx = randomNumber(responses.length);
+  return slack.formTextSections(responses[idx]);
+};
+
+export const sendSuddenDeathWinner = (player) => {
+  const name = player.displayName ? `*${player.displayName}*` : `<@${player.id}>`;
+  return slack.formTextSections([
+    ':tada: :tada: :tada:',
+    `${name} survives sudden death and takes the :crown:!`,
+    '*What a champion!* :muscle:',
+    '\n',
+  ]);
+};
+
+export const sendSuddenDeathNobodyCorrect = () => {
+  return slack.formTextSections([
+    'Nobody got that one right :grimacing:',
+    'Let\'s try another question...',
+    '\n',
+  ]);
+};
+
+export const sendSuddenDeathAllEliminated = () => {
+  return slack.formTextSections([
+    ':boom: Everyone got eliminated!',
+    'That was quite the bloodbath :skull_and_crossbones:',
+    ':recycle: *But we need a winner!* Everyone is back in — sudden death continues!',
+    '\n',
+  ]);
+};
+
+// ─── End Game Messages ────────────────────────────────────────
 
 export const endGameMessages = (highScore, winners) => {
   if (winners[2]) {
@@ -420,7 +472,7 @@ export const endGameMessages = (highScore, winners) => {
   ]);
 };
 
-export const playerSelectCategory = (player) => {
+export const playerSelectCategory = (player, countdown) => {
   const {
     displayName,
     id,
@@ -429,8 +481,14 @@ export const playerSelectCategory = (player) => {
   if (displayName) {
     text = `*${displayName}*`;
   }
+  let timerText = `${text} is selecting the next round category`;
+  if (countdown !== undefined) {
+    timerText += countdown > 0
+      ? ` — *${countdown}s* to pick or one will be chosen randomly!`
+      : ' — *Time\'s up!* Picking a random category...';
+  }
   return slack.formTextSections([
-    `${text} is selecting the next round category`,
+    timerText,
     '\n',
   ]);
 };
@@ -483,5 +541,162 @@ export const selectCategories = () => {
   return [
     ...slack.formTextSections('Please select the next round category'),
     ...buttons,
+  ];
+};
+
+// ─── Leaderboard & Stats Messages ─────────────────────────────
+
+export const sendChannelLeaderboard = (playerList) => {
+  if (!playerList || playerList.length === 0) {
+    return null;
+  }
+
+  const medals = [':first_place_medal:', ':second_place_medal:', ':third_place_medal:'];
+  const lines = playerList.slice(0, 5).map((p, idx) => {
+    const rank = idx < 3 ? medals[idx] : `*${idx + 1}.*`;
+    const name = p.displayName || `<@${p.id}>`;
+    const winRate = p.gamesPlayed > 0
+      ? `${Math.round((p.wins / p.gamesPlayed) * 100)}%`
+      : '—';
+    const sdLabel = p.suddenDeathWins > 0 ? ` | :skull_and_crossbones: ${p.suddenDeathWins}` : '';
+    return `${rank} *${name}* — ${p.lifeTimeScore} pts | ${p.wins}W / ${p.gamesPlayed}G (${winRate})${sdLabel}`;
+  });
+
+  return slack.formTextSections([
+    ':trophy: *CURRENT STANDINGS — TOP 5*',
+    lines.join('\n'),
+  ]);
+};
+
+export const sendLeaderboard = (playerList) => {
+  if (!playerList || playerList.length === 0) {
+    return [
+      ...slack.formTextSections([
+        ':trophy: *TRIVIA LEADERBOARD*',
+        '\n',
+        'No players have scored yet! Play some trivia first.',
+      ]),
+      {
+        type: 'actions',
+        elements: [{
+          type: 'button',
+          text: { type: 'plain_text', text: 'Got it' },
+          value: 'ignore',
+        }],
+      },
+    ];
+  }
+
+  const medals = [':first_place_medal:', ':second_place_medal:', ':third_place_medal:'];
+  const blocks = slack.formTextSections(':trophy: *TRIVIA LEADERBOARD — TOP 10*');
+
+  playerList.forEach((p, idx) => {
+    const rank = idx < 3 ? medals[idx] : `*${idx + 1}.*`;
+    const name = p.displayName || `<@${p.id}>`;
+    const winRate = p.gamesPlayed > 0
+      ? `${Math.round((p.wins / p.gamesPlayed) * 100)}%`
+      : '—';
+    const sdLabel = p.suddenDeathWins > 0 ? ` | :skull_and_crossbones: ${p.suddenDeathWins}` : '';
+
+    blocks.push({
+      type: 'section',
+      fields: [
+        {
+          type: 'mrkdwn',
+          text: `${rank} *${name}*`,
+        },
+        {
+          type: 'mrkdwn',
+          text: `:star: ${p.lifeTimeScore} pts | :trophy: ${p.wins}W / ${p.gamesPlayed}G (${winRate})${sdLabel}`,
+        },
+      ],
+    });
+  });
+
+  blocks.push({
+    type: 'actions',
+    elements: [{
+      type: 'button',
+      text: { type: 'plain_text', text: 'Dismiss' },
+      value: 'ignore',
+    }],
+  });
+
+  return blocks;
+};
+
+export const sendPlayerStats = (player, categoryList) => {
+  const name = player.displayName || `<@${player.id}>`;
+  const winRate = player.gamesPlayed > 0
+    ? `${Math.round((player.wins / player.gamesPlayed) * 100)}%`
+    : '—';
+
+  const blocks = slack.formTextSections([
+    `:bar_chart: *STATS — ${name}*`,
+  ]);
+
+  // Overview section
+  blocks.push({
+    type: 'section',
+    fields: [
+      { type: 'mrkdwn', text: `:star: *Lifetime Score:* ${player.lifeTimeScore}` },
+      { type: 'mrkdwn', text: `:video_game: *Games Played:* ${player.gamesPlayed}` },
+      { type: 'mrkdwn', text: `:trophy: *Wins:* ${player.wins} (${winRate})` },
+      { type: 'mrkdwn', text: `:skull_and_crossbones: *Sudden Death Wins:* ${player.suddenDeathWins}` },
+    ],
+  });
+
+  blocks.push({ type: 'divider' });
+  blocks.push(...slack.formTextSections('*Category Breakdown*'));
+
+  const catStats = player.categoryStats || {};
+  const catMap = {};
+  categoryList.forEach(c => { catMap[c.value] = c.label; });
+
+  // Build category rows
+  const catEntries = Object.entries(catStats)
+    .filter(([, stats]) => stats.correct > 0 || stats.wrong > 0)
+    .sort((a, b) => b[1].points - a[1].points);
+
+  if (catEntries.length === 0) {
+    blocks.push(...slack.formTextSections('No category stats yet. Play some trivia!'));
+  } else {
+    catEntries.forEach(([catValue, stats]) => {
+      const label = catMap[catValue] || catValue;
+      const total = stats.correct + stats.wrong;
+      const accuracy = total > 0 ? `${Math.round((stats.correct / total) * 100)}%` : '—';
+      blocks.push({
+        type: 'section',
+        fields: [
+          { type: 'mrkdwn', text: `${label}` },
+          { type: 'mrkdwn', text: `:white_check_mark: ${stats.correct} | :x: ${stats.wrong} | :dart: ${accuracy} | :star: ${stats.points} pts` },
+        ],
+      });
+    });
+  }
+
+  blocks.push({
+    type: 'actions',
+    elements: [{
+      type: 'button',
+      text: { type: 'plain_text', text: 'Dismiss' },
+      value: 'ignore',
+    }],
+  });
+
+  return blocks;
+};
+
+export const sendNoStats = (userId) => {
+  return [
+    ...slack.formTextSections(`No stats found for <@${userId}>. They haven't played any trivia yet!`),
+    {
+      type: 'actions',
+      elements: [{
+        type: 'button',
+        text: { type: 'plain_text', text: 'Got it' },
+        value: 'ignore',
+      }],
+    },
   ];
 };
