@@ -1,5 +1,14 @@
 // Pure helper functions for trivia stats — no side effects, easy to test.
 
+export function ensureStreakStats(streaks) {
+  return {
+    currentWinStreak: streaks.currentWinStreak || 0,
+    bestWinStreak: streaks.bestWinStreak || 0,
+    currentAnswerStreak: streaks.currentAnswerStreak || 0,
+    bestAnswerStreak: streaks.bestAnswerStreak || 0,
+  };
+}
+
 export function ensurePlayerStats(player) {
   return {
     displayName: player.displayName || null,
@@ -8,6 +17,8 @@ export function ensurePlayerStats(player) {
     suddenDeathWins: player.suddenDeathWins || 0,
     gamesPlayed: player.gamesPlayed || 0,
     categoryStats: player.categoryStats || {},
+    streaks: ensureStreakStats(player.streaks || {}),
+    achievements: player.achievements || [],
   };
 }
 
@@ -33,6 +44,32 @@ export function updateCategoryStats(players, userId, category, isCorrect, points
   } else {
     catStats.wrong += 1;
   }
+}
+
+export function updateWinStreaks(player, isWinner) {
+  const prev = ensureStreakStats(player.streaks || {});
+  const currentWinStreak = isWinner ? prev.currentWinStreak + 1 : 0;
+  return {
+    ...player,
+    streaks: {
+      ...prev,
+      currentWinStreak,
+      bestWinStreak: Math.max(prev.bestWinStreak, currentWinStreak),
+    },
+  };
+}
+
+export function updateAnswerStreak(player, isCorrect) {
+  const prev = ensureStreakStats(player.streaks || {});
+  const currentAnswerStreak = isCorrect ? prev.currentAnswerStreak + 1 : 0;
+  return {
+    ...player,
+    streaks: {
+      ...prev,
+      currentAnswerStreak,
+      bestAnswerStreak: Math.max(prev.bestAnswerStreak, currentAnswerStreak),
+    },
+  };
 }
 
 export function buildGameRecord(gameId, currentPlayers, players, winner, wasSuddenDeath) {

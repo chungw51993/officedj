@@ -46,6 +46,8 @@ import {
   ensureCategoryStats,
   updateCategoryStats,
   buildGameRecord,
+  updateWinStreaks,
+  updateAnswerStreak,
 } from '../helper/triviaStats';
 
 const { v4: uuidv4 } = require('uuid');
@@ -507,6 +509,18 @@ class TriviaController {
         winners.unshift(null);
       }
     }
+
+    // Update win streaks for players who answered at least one question
+    const soloWinnerId = sortedScores[0] && scores[sortedScores[0]].length === 1
+      ? scores[sortedScores[0]][0].id
+      : null;
+    Object.keys(currentPlayers).forEach((k) => {
+      const answered = currentPlayers[k].answers && currentPlayers[k].answers.length > 0;
+      if (answered && players[k]) {
+        players[k] = updateWinStreaks(ensurePlayerStats(players[k]), k === soloWinnerId);
+      }
+    });
+
     const endGame = endGameMessages(highScore, winners);
     sendMultipleMessages(endGame, 3500);
     await trivia.setState({
@@ -690,6 +704,18 @@ class TriviaController {
     players[winnerId] = ensurePlayerStats(players[winnerId] || { displayName: winner.displayName });
     players[winnerId].suddenDeathWins += 1;
     players[winnerId].wins += 1;
+    players[winnerId] = updateWinStreaks(ensurePlayerStats(players[winnerId]), true);
+
+    // Reset win streak for other sudden death participants who lost
+    const currentPlayers = trivia.get('currentPlayers');
+    Object.keys(currentPlayers).forEach((k) => {
+      if (k !== winnerId) {
+        const answered = currentPlayers[k].answers && currentPlayers[k].answers.length > 0;
+        if (answered && players[k]) {
+          players[k] = updateWinStreaks(ensurePlayerStats(players[k]), false);
+        }
+      }
+    });
 
     // Send winner announcement
     const winnerMsg = sendSuddenDeathWinner(winner);
@@ -822,6 +848,7 @@ class TriviaController {
 
         // Track category stats
         updateCategoryStats(players, userId, category, true, point);
+        players[userId] = updateAnswerStreak(ensurePlayerStats(players[userId]), true);
       } else {
         wrongAnswers.push({
           id: userId,
@@ -830,6 +857,7 @@ class TriviaController {
 
         // Track category stats
         updateCategoryStats(players, userId, category, false, 0);
+        players[userId] = updateAnswerStreak(ensurePlayerStats(players[userId]), false);
       }
 
       slack.postEphemeral(userId, sendYouAnswered(answer));

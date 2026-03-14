@@ -3,6 +3,9 @@ import {
   ensureCategoryStats,
   updateCategoryStats,
   buildGameRecord,
+  ensureStreakStats,
+  updateWinStreaks,
+  updateAnswerStreak,
 } from '../helper/triviaStats';
 
 describe('ensurePlayerStats', () => {
@@ -15,6 +18,13 @@ describe('ensurePlayerStats', () => {
       suddenDeathWins: 0,
       gamesPlayed: 0,
       categoryStats: {},
+      streaks: {
+        currentWinStreak: 0,
+        bestWinStreak: 0,
+        currentAnswerStreak: 0,
+        bestAnswerStreak: 0,
+      },
+      achievements: [],
     });
   });
 
@@ -26,6 +36,8 @@ describe('ensurePlayerStats', () => {
       suddenDeathWins: 2,
       gamesPlayed: 10,
       categoryStats: { science: { correct: 3, wrong: 1, points: 9, gamesPlayed: 2 } },
+      streaks: { currentWinStreak: 2, bestWinStreak: 3, currentAnswerStreak: 1, bestAnswerStreak: 5 },
+      achievements: [{ id: 'first_blood', unlockedAt: '2026-01-01' }],
     });
     expect(result.displayName).toBe('Alice');
     expect(result.lifeTimeScore).toBe(42);
@@ -33,6 +45,8 @@ describe('ensurePlayerStats', () => {
     expect(result.suddenDeathWins).toBe(2);
     expect(result.gamesPlayed).toBe(10);
     expect(result.categoryStats.science.correct).toBe(3);
+    expect(result.streaks.currentWinStreak).toBe(2);
+    expect(result.achievements).toHaveLength(1);
   });
 
   it('fills missing fields on partial player', () => {
@@ -42,6 +56,112 @@ describe('ensurePlayerStats', () => {
     expect(result.gamesPlayed).toBe(0);
     expect(result.categoryStats).toEqual({});
     expect(result.wins).toBe(3);
+    expect(result.streaks).toEqual({
+      currentWinStreak: 0,
+      bestWinStreak: 0,
+      currentAnswerStreak: 0,
+      bestAnswerStreak: 0,
+    });
+    expect(result.achievements).toEqual([]);
+  });
+});
+
+describe('ensureStreakStats', () => {
+  it('fills all defaults for empty object', () => {
+    const result = ensureStreakStats({});
+    expect(result).toEqual({
+      currentWinStreak: 0,
+      bestWinStreak: 0,
+      currentAnswerStreak: 0,
+      bestAnswerStreak: 0,
+    });
+  });
+
+  it('preserves existing values', () => {
+    const result = ensureStreakStats({
+      currentWinStreak: 3,
+      bestWinStreak: 5,
+      currentAnswerStreak: 2,
+      bestAnswerStreak: 8,
+    });
+    expect(result).toEqual({
+      currentWinStreak: 3,
+      bestWinStreak: 5,
+      currentAnswerStreak: 2,
+      bestAnswerStreak: 8,
+    });
+  });
+});
+
+describe('updateWinStreaks', () => {
+  it('increments win streak for the winner', () => {
+    const player = ensurePlayerStats({});
+    const result = updateWinStreaks(player, true);
+    expect(result.streaks.currentWinStreak).toBe(1);
+    expect(result.streaks.bestWinStreak).toBe(1);
+  });
+
+  it('resets win streak for a non-winner', () => {
+    const player = ensurePlayerStats({
+      streaks: { currentWinStreak: 3, bestWinStreak: 5, currentAnswerStreak: 0, bestAnswerStreak: 0 },
+    });
+    const result = updateWinStreaks(player, false);
+    expect(result.streaks.currentWinStreak).toBe(0);
+    expect(result.streaks.bestWinStreak).toBe(5);
+  });
+
+  it('updates bestWinStreak when current exceeds it', () => {
+    const player = ensurePlayerStats({
+      streaks: { currentWinStreak: 4, bestWinStreak: 4, currentAnswerStreak: 0, bestAnswerStreak: 0 },
+    });
+    const result = updateWinStreaks(player, true);
+    expect(result.streaks.currentWinStreak).toBe(5);
+    expect(result.streaks.bestWinStreak).toBe(5);
+  });
+
+  it('does not mutate original player', () => {
+    const player = ensurePlayerStats({
+      streaks: { currentWinStreak: 2, bestWinStreak: 3, currentAnswerStreak: 0, bestAnswerStreak: 0 },
+    });
+    const result = updateWinStreaks(player, true);
+    expect(player.streaks.currentWinStreak).toBe(2);
+    expect(result.streaks.currentWinStreak).toBe(3);
+  });
+});
+
+describe('updateAnswerStreak', () => {
+  it('increments streak on correct answer', () => {
+    const player = ensurePlayerStats({});
+    const result = updateAnswerStreak(player, true);
+    expect(result.streaks.currentAnswerStreak).toBe(1);
+    expect(result.streaks.bestAnswerStreak).toBe(1);
+  });
+
+  it('resets streak on wrong answer', () => {
+    const player = ensurePlayerStats({
+      streaks: { currentWinStreak: 0, bestWinStreak: 0, currentAnswerStreak: 5, bestAnswerStreak: 7 },
+    });
+    const result = updateAnswerStreak(player, false);
+    expect(result.streaks.currentAnswerStreak).toBe(0);
+    expect(result.streaks.bestAnswerStreak).toBe(7);
+  });
+
+  it('updates bestAnswerStreak when current exceeds it', () => {
+    const player = ensurePlayerStats({
+      streaks: { currentWinStreak: 0, bestWinStreak: 0, currentAnswerStreak: 6, bestAnswerStreak: 6 },
+    });
+    const result = updateAnswerStreak(player, true);
+    expect(result.streaks.currentAnswerStreak).toBe(7);
+    expect(result.streaks.bestAnswerStreak).toBe(7);
+  });
+
+  it('does not mutate original player', () => {
+    const player = ensurePlayerStats({
+      streaks: { currentWinStreak: 0, bestWinStreak: 0, currentAnswerStreak: 3, bestAnswerStreak: 3 },
+    });
+    const result = updateAnswerStreak(player, true);
+    expect(player.streaks.currentAnswerStreak).toBe(3);
+    expect(result.streaks.currentAnswerStreak).toBe(4);
   });
 });
 
