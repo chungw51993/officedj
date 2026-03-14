@@ -45,6 +45,9 @@ const dashboardController = {
         }))
         .sort((a, b) => b.points - a.points);
 
+      const streaks = player.streaks || {};
+      const playerAchievements = player.achievements || [];
+
       res.json({
         userId,
         displayName: player.displayName || userId,
@@ -53,6 +56,13 @@ const dashboardController = {
         suddenDeathWins: player.suddenDeathWins || 0,
         gamesPlayed: player.gamesPlayed || 0,
         categoryStats: categoryList,
+        streaks: {
+          currentWinStreak: streaks.currentWinStreak || 0,
+          bestWinStreak: streaks.bestWinStreak || 0,
+          currentAnswerStreak: streaks.currentAnswerStreak || 0,
+          bestAnswerStreak: streaks.bestAnswerStreak || 0,
+        },
+        achievements: playerAchievements,
       });
     } catch (err) {
       res.status(500).json({ error: 'Failed to fetch player' });

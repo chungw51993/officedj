@@ -1,4 +1,5 @@
 import categories from './triviaCategory';
+import { achievements as achievementDefs } from './triviaAchievements';
 import slackClient from '../util/slackClient';
 import randomNumber from '../util/randomNumber';
 import shuffle from '../util/shuffle';
@@ -646,6 +647,35 @@ export const sendPlayerStats = (player, categoryList) => {
     ],
   });
 
+  // Streaks section
+  const streaks = player.streaks || {};
+  blocks.push({
+    type: 'section',
+    fields: [
+      { type: 'mrkdwn', text: `:fire: *Win Streak:* ${streaks.currentWinStreak || 0} (Best: ${streaks.bestWinStreak || 0})` },
+      { type: 'mrkdwn', text: `:zap: *Answer Streak:* ${streaks.currentAnswerStreak || 0} (Best: ${streaks.bestAnswerStreak || 0})` },
+    ],
+  });
+
+  // Achievements section
+  const playerAchievements = player.achievements || [];
+  if (playerAchievements.length > 0) {
+    const defMap = {};
+    achievementDefs.forEach(a => { defMap[a.id] = a; });
+
+    blocks.push({ type: 'divider' });
+    blocks.push(...slack.formTextSections(`:medal: *Achievements (${playerAchievements.length})*`));
+    const achievementLines = playerAchievements
+      .map(a => {
+        const def = defMap[a.id];
+        const name = def ? def.name : a.id;
+        const desc = def ? def.description : '';
+        return `:unlock: *${name}* — ${desc}`;
+      })
+      .join('\n');
+    blocks.push(...slack.formTextSections(achievementLines));
+  }
+
   blocks.push({ type: 'divider' });
   blocks.push(...slack.formTextSections('*Category Breakdown*'));
 
@@ -699,4 +729,58 @@ export const sendNoStats = (userId) => {
       }],
     },
   ];
+};
+
+// ─── Achievement & Streak Messages ───────────────────────────
+
+export const sendAchievementUnlocked = (unlockedAchievements) => {
+  if (!unlockedAchievements || unlockedAchievements.length === 0) return [];
+
+  const lines = unlockedAchievements.map(a => `:unlock: *${a.name}* — ${a.description}`);
+
+  return [
+    ...slack.formTextSections([
+      ':tada: *Achievement Unlocked!*',
+      lines.join('\n'),
+    ]),
+    {
+      type: 'actions',
+      elements: [{
+        type: 'button',
+        text: { type: 'plain_text', text: 'Nice!' },
+        value: 'ignore',
+      }],
+    },
+  ];
+};
+
+export const sendWeeklyRecap = (topPlayers, weeklyAchievements) => {
+  if (!topPlayers || topPlayers.length === 0) return null;
+
+  const medals = [':first_place_medal:', ':second_place_medal:', ':third_place_medal:'];
+  const lines = topPlayers.slice(0, 5).map((p, idx) => {
+    const rank = idx < 3 ? medals[idx] : `*${idx + 1}.*`;
+    const name = p.displayName || `<@${p.id}>`;
+    return `${rank} *${name}* — ${p.weeklyScore} pts | ${p.weeklyWins}W`;
+  });
+
+  const blocks = slack.formTextSections([
+    ':newspaper: *WEEKLY TRIVIA RECAP*',
+    'Here\'s how last week went down:',
+    '\n',
+    lines.join('\n'),
+  ]);
+
+  if (weeklyAchievements && weeklyAchievements.length > 0) {
+    const achievementLines = weeklyAchievements.map(a =>
+      `:unlock: *${a.playerName}* unlocked *${a.achievementName}*`
+    );
+    blocks.push(...slack.formTextSections([
+      '\n',
+      ':medal: *Achievements Unlocked This Week*',
+      achievementLines.join('\n'),
+    ]));
+  }
+
+  return blocks;
 };

@@ -33,7 +33,11 @@ import {
   sendLeaderboard,
   sendPlayerStats,
   sendNoStats,
+  sendAchievementUnlocked,
+  sendWeeklyRecap,
 } from '../helper/formTriviaBlock';
+
+import { checkAchievements, achievements as achievementDefs } from '../helper/triviaAchievements';
 
 import spotifyController from './spotifyController';
 
@@ -46,6 +50,8 @@ import {
   ensureCategoryStats,
   updateCategoryStats,
   buildGameRecord,
+  updateWinStreaks,
+  updateAnswerStreak,
 } from '../helper/triviaStats';
 
 const { v4: uuidv4 } = require('uuid');
@@ -85,6 +91,99 @@ class TriviaController {
       scheduled: true,
       timezone: 'America/Chicago',
     });
+    this.handleWeeklyRecap = this.handleWeeklyRecap.bind(this);
+    cron.schedule('0 50 16 * * 1', this.handleWeeklyRecap, {
+      scheduled: true,
+      timezone: 'America/Chicago',
+    });
+  }
+
+  async handleWeeklyRecap() {
+    const gameHistory = trivia.get('gameHistory') || [];
+    const players = trivia.get('players') || {};
+
+    // Calculate previous week boundaries (Monday 00:00 CT to Sunday 23:59 CT)
+    const now = new Date();
+    const dayOfWeek = now.getDay(); // 0=Sun, 1=Mon
+    const daysToLastMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+    const lastMonday = new Date(now);
+    lastMonday.setDate(now.getDate() - daysToLastMonday - 7);
+    lastMonday.setHours(0, 0, 0, 0);
+
+    const lastSunday = new Date(lastMonday);
+    lastSunday.setDate(lastMonday.getDate() + 6);
+    lastSunday.setHours(23, 59, 59, 999);
+
+    // Filter games from last week
+    const weekGames = gameHistory.filter((g) => {
+      const gameDate = new Date(g.date);
+      return gameDate >= lastMonday && gameDate <= lastSunday;
+    });
+
+    if (weekGames.length === 0) return;
+
+    // Aggregate weekly scores
+    const weeklyStats = {};
+    weekGames.forEach((game) => {
+      Object.entries(game.scores || {}).forEach(([userId, data]) => {
+        if (!weeklyStats[userId]) {
+          weeklyStats[userId] = {
+            id: userId,
+            displayName: data.displayName || (players[userId] && players[userId].displayName) || null,
+            weeklyScore: 0,
+            weeklyWins: 0,
+          };
+        }
+        weeklyStats[userId].weeklyScore += data.score || 0;
+        if (game.winnerId === userId) {
+          weeklyStats[userId].weeklyWins += 1;
+        }
+      });
+    });
+
+    // Sort: score desc, then wins desc, then displayName asc
+    const topPlayers = Object.values(weeklyStats)
+      .sort((a, b) => {
+        if (b.weeklyScore !== a.weeklyScore) return b.weeklyScore - a.weeklyScore;
+        if (b.weeklyWins !== a.weeklyWins) return b.weeklyWins - a.weeklyWins;
+        const nameA = (a.displayName || '').toLowerCase();
+        const nameB = (b.displayName || '').toLowerCase();
+        return nameA.localeCompare(nameB);
+      })
+      .slice(0, 5);
+
+    // Find achievements unlocked during the week
+    const weeklyAchievements = [];
+    Object.entries(players).forEach(([userId, player]) => {
+      (player.achievements || []).forEach((a) => {
+        const unlockedDate = new Date(a.unlockedAt);
+        if (unlockedDate >= lastMonday && unlockedDate <= lastSunday) {
+          const def = achievementDefs.find(d => d.id === a.id);
+          weeklyAchievements.push({
+            playerName: player.displayName || `<@${userId}>`,
+            achievementName: def ? def.name : a.id,
+          });
+        }
+      });
+    });
+
+    const blocks = sendWeeklyRecap(topPlayers, weeklyAchievements);
+    if (blocks) {
+      await slack.postMessage(null, blocks);
+    }
+  }
+
+  checkAndNotifyAchievements(userId, player, filterIds) {
+    const newlyUnlocked = checkAchievements(player, filterIds);
+    if (newlyUnlocked.length === 0) return player;
+
+    const now = new Date().toISOString();
+    const newAchievements = newlyUnlocked.map(a => ({ id: a.id, unlockedAt: now }));
+    slack.postEphemeral(userId, sendAchievementUnlocked(newlyUnlocked));
+    return {
+      ...player,
+      achievements: [...(player.achievements || []), ...newAchievements],
+    };
   }
 
   handleHelp(req, res) {
@@ -507,6 +606,25 @@ class TriviaController {
         winners.unshift(null);
       }
     }
+
+    // Update win streaks for players who answered at least one question
+    const soloWinnerId = sortedScores[0] && scores[sortedScores[0]].length === 1
+      ? scores[sortedScores[0]][0].id
+      : null;
+    Object.keys(currentPlayers).forEach((k) => {
+      const answered = currentPlayers[k].answers && currentPlayers[k].answers.length > 0;
+      if (answered && players[k]) {
+        players[k] = updateWinStreaks(ensurePlayerStats(players[k]), k === soloWinnerId);
+      }
+    });
+
+    // Check achievements for all participating players who scored
+    Object.keys(currentPlayers).forEach((k) => {
+      if (currentPlayers[k].score > 0 && players[k]) {
+        players[k] = this.checkAndNotifyAchievements(k, ensurePlayerStats(players[k]));
+      }
+    });
+
     const endGame = endGameMessages(highScore, winners);
     sendMultipleMessages(endGame, 3500);
     await trivia.setState({
@@ -690,6 +808,20 @@ class TriviaController {
     players[winnerId] = ensurePlayerStats(players[winnerId] || { displayName: winner.displayName });
     players[winnerId].suddenDeathWins += 1;
     players[winnerId].wins += 1;
+    players[winnerId] = updateWinStreaks(ensurePlayerStats(players[winnerId]), true);
+
+    // Reset win streak for other sudden death participants who lost
+    const currentPlayers = trivia.get('currentPlayers');
+    Object.keys(currentPlayers).forEach((k) => {
+      if (k !== winnerId) {
+        const answered = currentPlayers[k].answers && currentPlayers[k].answers.length > 0;
+        if (answered && players[k]) {
+          players[k] = updateWinStreaks(ensurePlayerStats(players[k]), false);
+        }
+      }
+    });
+
+    players[winnerId] = this.checkAndNotifyAchievements(winnerId, ensurePlayerStats(players[winnerId]));
 
     // Send winner announcement
     const winnerMsg = sendSuddenDeathWinner(winner);
@@ -822,6 +954,8 @@ class TriviaController {
 
         // Track category stats
         updateCategoryStats(players, userId, category, true, point);
+        players[userId] = updateAnswerStreak(ensurePlayerStats(players[userId]), true);
+        players[userId] = this.checkAndNotifyAchievements(userId, players[userId], ['hot_streak', 'unstoppable']);
       } else {
         wrongAnswers.push({
           id: userId,
@@ -830,6 +964,7 @@ class TriviaController {
 
         // Track category stats
         updateCategoryStats(players, userId, category, false, 0);
+        players[userId] = updateAnswerStreak(ensurePlayerStats(players[userId]), false);
       }
 
       slack.postEphemeral(userId, sendYouAnswered(answer));

@@ -49,6 +49,14 @@ const PlayerDetail = () => {
           <div className="trivia-stat-value">{player.suddenDeathWins}</div>
           <div className="trivia-stat-label">Sudden Death Wins</div>
         </div>
+        <div className="trivia-stat-card">
+          <div className="trivia-stat-value">{player.streaks?.currentWinStreak || 0}</div>
+          <div className="trivia-stat-label">Win Streak (Best: {player.streaks?.bestWinStreak || 0})</div>
+        </div>
+        <div className="trivia-stat-card">
+          <div className="trivia-stat-value">{player.streaks?.currentAnswerStreak || 0}</div>
+          <div className="trivia-stat-label">Answer Streak (Best: {player.streaks?.bestAnswerStreak || 0})</div>
+        </div>
       </div>
 
       <h2 className="trivia-subtitle">Category Breakdown</h2>
@@ -77,6 +85,23 @@ const PlayerDetail = () => {
             ))}
           </tbody>
         </table>
+      )}
+      {player.achievements && player.achievements.length > 0 && (
+        <>
+          <h2 className="trivia-subtitle">Achievements</h2>
+          <div className="trivia-achievements-list">
+            {player.achievements.map((a) => (
+              <div key={a.id} className="trivia-achievement-badge">
+                <span className="trivia-achievement-name">
+                  {a.id.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
+                </span>
+                <span className="trivia-achievement-date">
+                  {new Date(a.unlockedAt).toLocaleDateString()}
+                </span>
+              </div>
+            ))}
+          </div>
+        </>
       )}
     </div>
   );
