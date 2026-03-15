@@ -380,6 +380,10 @@ export const sendSuddenDeathWinner = (player) => {
     `${name} survives sudden death and takes the :crown:!`,
     '*What a champion!* :muscle:',
     '\n',
+    'I guess that\'s all for today\'s trivia',
+    'Hope everybody learned something today',
+    'I\'ll see you next time! :v:',
+    '\n',
   ]);
 };
 
