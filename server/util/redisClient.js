@@ -47,8 +47,10 @@ class RedisClient {
       const hset = [key];
       Object.keys(object).forEach((k) => {
         hset.push(k);
-        if (typeof object[k] === 'string' || typeof object[k] === 'boolean') {
+        if (typeof object[k] === 'string') {
           hset.push(object[k]);
+        } else if (typeof object[k] === 'boolean') {
+          hset.push(String(object[k]));
         } else {
           const buffer = Buffer.from(JSON.stringify(object[k]));
           hset.push(buffer);
