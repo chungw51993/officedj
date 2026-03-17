@@ -56,7 +56,7 @@ class RedisClient {
           hset.push(buffer);
         }
       });
-      this.client.hset(hset);
+      this.client.hmset(hset);
       resolve(true);
     });
   }
