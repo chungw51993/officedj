@@ -1,7 +1,9 @@
 import redis from '../util/redisClient';
+import Logger from '../util/logger';
 
 class DJDelta {
   constructor() {
+    this.logger = Logger.getLogger('DJDelta');
     this.state = this.getInitialState();
     this._ready = this.initialize();
   }
@@ -18,13 +20,26 @@ class DJDelta {
     };
   }
 
-  async initialize() {
-    const state = await redis.getObject('djDeltaState');
-    if (state) {
-      this.state = { ...this.getInitialState(), ...state };
-    } else {
-      await redis.setObject('djDeltaState', this.state);
+  async initialize(retries = 3) {
+    for (let attempt = 1; attempt <= retries; attempt++) {
+      try {
+        const state = await redis.getObject('djDeltaState');
+        if (state) {
+          this.state = { ...this.getInitialState(), ...state };
+          this.logger.debug('Loaded DJ state from Redis');
+          return;
+        }
+        await redis.setObject('djDeltaState', this.state);
+        this.logger.debug('Initialized fresh DJ state in Redis');
+        return;
+      } catch (err) {
+        this.logger.error(`Failed to load state (attempt ${attempt}/${retries}): ${err.message}`);
+        if (attempt < retries) {
+          await new Promise((r) => setTimeout(r, 2000 * attempt));
+        }
+      }
     }
+    this.logger.error('Exhausted retries — using in-memory defaults (will sync on next setState)');
   }
 
   async ready() {
@@ -43,6 +58,7 @@ class DJDelta {
   }
 
   async set(field, value) {
+    await this._ready;
     this.state[field] = value;
     await redis.setObject('djDeltaState', this.state);
   }

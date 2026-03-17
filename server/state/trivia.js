@@ -1,7 +1,9 @@
 import redis from '../util/redisClient';
+import Logger from '../util/logger';
 
 class Trivia {
   constructor() {
+    this.logger = Logger.getLogger('Trivia');
     this.state = this.getInitialState();
     this._ready = this.initialize();
   }
@@ -31,14 +33,27 @@ class Trivia {
     };
   }
 
-  async initialize() {
-    const state = await redis.getObject('triviaState');
-    if (state) {
-      // Merge with initial state so new fields get defaults
-      this.state = { ...this.getInitialState(), ...state };
-    } else {
-      await redis.setObject('triviaState', this.state);
+  async initialize(retries = 3) {
+    for (let attempt = 1; attempt <= retries; attempt++) {
+      try {
+        const state = await redis.getObject('triviaState');
+        if (state) {
+          this.state = { ...this.getInitialState(), ...state };
+          this.logger.debug('Loaded trivia state from Redis');
+          return;
+        }
+        // Key genuinely missing — first boot
+        await redis.setObject('triviaState', this.state);
+        this.logger.debug('Initialized fresh trivia state in Redis');
+        return;
+      } catch (err) {
+        this.logger.error(`Failed to load state (attempt ${attempt}/${retries}): ${err.message}`);
+        if (attempt < retries) {
+          await new Promise((r) => setTimeout(r, 2000 * attempt));
+        }
+      }
     }
+    this.logger.error('Exhausted retries — using in-memory defaults (will sync on next setState)');
   }
 
   async ready() {
@@ -60,7 +75,6 @@ class Trivia {
   async setState(state) {
     await this._ready;
     Object.keys(state).forEach((key) => {
-      // Allow setting new keys that exist in initial state
       this.state[key] = state[key];
     });
     await redis.setObject('triviaState', this.state);
